@@ -1,4 +1,4 @@
-import { Vec2 } from "../common/Transform";
+import { Rect, Vec2 } from "../common/Transform";
 import standardChips from "../common/StandardChips.json";
 
 export class ChipType {
@@ -100,11 +100,8 @@ export class ChipType {
         type = type.toLowerCase();
         const data = ChipType.GetData(type);
         data.size = { ...size };
-        if (type != ChipType.BaseChip) {
-            console.log("CLAMP", type, ChipType.BaseChip);
-            data.size.x = Math.min(Math.max(data.size.x, 1), ChipType.maxSize.x);
-            data.size.y = Math.min(Math.max(data.size.y, 1), ChipType.maxSize.y);
-        }
+        data.size.x = Math.min(Math.max(data.size.x, 1), type != ChipType.BaseChip ? ChipType.maxSize.x : 9);
+        data.size.y = Math.min(Math.max(data.size.y, 1), type != ChipType.BaseChip ? ChipType.maxSize.y : 5);
         data.inputs.length = data.size.x + 1;
         data.outputs.length = data.size.x + 1;
         ChipType.types[type] = data;
@@ -178,6 +175,16 @@ export class Chip {
         return consts;
     };
 
+    public get rect(): Rect {
+        const size = this.size;
+        return {
+            left: this.pos.x,
+            right: this.pos.x + size.x,
+            top: this.pos.y,
+            bottom: this.pos.y + size.y,
+        };
+    }
+
 
     public toJSON(): { [k: string]: any } {
         return {
@@ -186,6 +193,14 @@ export class Chip {
             pos: this.pos,
             constants: this.constants,
         };
+    }
+
+    intersects(chip: Chip, pad: number = 0.5) {
+        const self: Rect = this.rect;
+        const other: Rect = chip.rect;
+        const x_overlap = Math.max(0, Math.min(self.right + pad, other.right + pad) - Math.max(self.left - pad, other.left - pad));
+        const y_overlap = Math.max(0, Math.min(self.bottom + pad, other.bottom + pad) - Math.max(self.top - pad, other.top - pad));
+        return x_overlap * y_overlap;
     }
 
     getData(): ChipTypeData {
@@ -250,8 +265,8 @@ export class Chip {
 }
 
 export class ChipContent {
-    public _chips: { [k: string]: Chip } = {};
-    public _connections: Connection[] = [];
+    private _chips: { [k: string]: Chip } = {};
+    private _connections: Connection[] = [];
 
     public get connections(): Connection[] { return [...this._connections]; }
     public get chips(): Chip[] { return Object.values(this._chips); }

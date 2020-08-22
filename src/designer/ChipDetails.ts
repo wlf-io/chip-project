@@ -25,14 +25,16 @@ class ChipDetails {
     constructor() {
         this.template = twig({ data: detailsTemplate });
         this.setupHtml();
+        this.hide();
     }
 
     public get style(): CSSStyleDeclaration { return this.container.style; }
 
     private setupHtml() {
         this.container = document.createElement("div");
-        this.container.classList.add("card", "chipDetailsContainer");
+        this.container.classList.add("card", "chipDetailsContainer", "shadow-sm");
         this.container.addEventListener("change", e => this.contentChanged(e));
+        this.container.addEventListener("mouseup", e => this.mouseUp(e))
         document.body.appendChild(this.container);
     }
 
@@ -72,21 +74,33 @@ class ChipDetails {
         console.log(JSON.parse(JSON.stringify(this.chip)));
     }
 
-    public hide() {
+    public hide(): ChipDetails {
         if (this.container) {
             this.container.style.display = "none";
         }
+        return this;
     }
 
-    show() {
+    show(): ChipDetails {
         if (this.container) {
             this.container.style.display = "";
+            this.container.classList.remove("closed");
         }
+        return this;
     }
 
-    setChip(chip: Chip) {
+    setChip(chip: Chip): ChipDetails {
         this.chip = chip;
-        this.container.innerHTML = this.template.render({ chip, types: { standard: ChipType.StandardTypeList(), custom: ChipType.CustomTypeList() } });
+        this.container.innerHTML = this.template.render({ chip, types: { standard: ChipType.StandardTypeList(), custom: ChipType.CustomTypeList() }, base: ChipType.BaseChip == chip.type });
+        return this;
+    }
+
+    private mouseUp(event: MouseEvent) {
+        if (event.target instanceof HTMLSpanElement) {
+            if (event.target.dataset.toggle == "details") {
+                this.container.classList.toggle("closed");
+            }
+        }
     }
 }
 

@@ -11,23 +11,30 @@ canvas.designer {
     max-width: 30vw;
     min-height: 100px;
     position: fixed;
-    top: 20px;
-    right: 20px;
 }
 
-
-.baseChipDetailsContainer {
-    min-width: 20vw;
-    max-width: 30vw;
-    min-height: 100px;
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-}
 
 .chipDetailsContent{
     max-height: calc(100vh - 40px - 3rem);
     overflow-y: auto;
+}
+.chipDetailsTitle span{
+    float: right;
+    cursor: pointer;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+.chipDetailsTitle span:before {
+    content: "-";
+}
+
+.chipDetailsContainer.closed .chipDetailsTitle span:before {
+    content: "+";
+}
+
+.chipDetailsContainer.closed .chipDetailsContent {
+    display: none;
 }
 
 .right-click-menu {

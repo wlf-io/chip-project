@@ -9,7 +9,8 @@ import StandardChips from "../common/StandardChips.json";
 class Designer {
 
     private canvas!: HTMLCanvasElement;
-    public details: ChipDetails;
+    private baseChipDetails: ChipDetails;
+    private selectedChipDetails: ChipDetails;
     private context!: CanvasRenderingContext2D;
 
     private zoom: number = 1;
@@ -32,11 +33,12 @@ class Designer {
     private mousePos: Vec2 = { x: 0, y: 0 };
     private mouseGridPos: Vec2 = { x: 0, y: 0 };
 
-    private debug: boolean = true;
+    private debug: boolean = false;
 
     private rightClick!: RightClickMenu;
 
     private baseChip: Chip;
+    private backgroundColour: string = "#FFF";
 
 
     public static Factory(chipType: string): Designer {
@@ -47,7 +49,13 @@ class Designer {
         ChipType.BaseChip = chipType;
         // this.setupTwigExtensions();
         this.baseChip = new Chip(chipType, chipType);
-        this.details = new ChipDetails();
+        this.selectedChipDetails = new ChipDetails();
+        this.selectedChipDetails.style.top = "20px";
+        this.selectedChipDetails.style.right = "20px";
+        this.baseChipDetails = new ChipDetails();
+        this.baseChipDetails.style.bottom = "20px";
+        this.baseChipDetails.style.right = "20px";
+        this.baseChipDetails.setChip(this.baseChip).show();
         this.setupContextMenu();
     }
 
@@ -82,7 +90,7 @@ class Designer {
     public setChipSize(gridSize: Vec2): Designer {
         this.baseChip.setSize(gridSize);
         this.content.chips.forEach(chip => chip.clamp2Grid(this.gridSize));
-        console.log(this.baseChip.size, this.gridSize);
+        this.baseChipDetails.setChip(this.baseChip);
         return this;
     }
 
@@ -96,10 +104,69 @@ class Designer {
         this.canvas.addEventListener('mousedown', e => this.mouseDown(e));
         this.canvas.addEventListener('mousemove', e => this.mouseMove(e));
         this.canvas.addEventListener('mouseup', e => this.mouseUp(e));
-        this.canvas.addEventListener('mouseleave', e => this.mouseUp(e));
+        this.canvas.addEventListener('mouseleave', e => this.mouseLeave(e));
         this.canvas.addEventListener('wheel', e => this.mouseWheel(e));
         this.canvas.addEventListener("contextmenu", e => this.mouseRightClick(e));
+        window.addEventListener("keyup", e => this.keyUp(e));
         return this;
+    }
+
+    private konami: string[] = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a", "Enter"];
+    private konamiProgress: number = 0;
+
+    private keyUp(event: KeyboardEvent) {
+        if (event.altKey && event.shiftKey && event.ctrlKey && event.key === "D") {
+            this.debug = !this.debug;
+        }
+        if (event.target instanceof HTMLElement && event.target.tagName.toUpperCase() == "BODY") {
+            if (event.key == this.konami[this.konamiProgress]) {
+                this.konamiProgress++;
+                console.log(this.konamiProgress);
+                if (this.konamiProgress >= this.konami.length) {
+                    this.konamiProgress = 0;
+                    this.doKonami();
+                    console.log("KONAMI");
+                }
+            } else this.konamiProgress = 0;
+        } else this.konamiProgress = 0;
+    }
+
+    private doKonami() {
+        let h = 0;
+        // let rgb: { r: number, g: number, b: number };
+        const int = window.setInterval(
+            () => {
+                h++;
+                if (h > 360) {
+                    this.backgroundColour = "#FFF";
+                    window.clearInterval(int);
+                } else {
+                    const rgb = this.HSVtoRGB(h / 360, 1, 1);
+                    this.backgroundColour = `#${rgb.r.toString(16).padStart(2, "0")}${rgb.g.toString(16).padStart(2, "0")}${rgb.b.toString(16).padStart(2, "0")}`;
+                }
+            }, 10
+        );
+    }
+    HSVtoRGB(h: number, s: number, v: number) {
+        var r = 0, g = 0, b = 0, i, f, p, q, t;
+        i = Math.floor(h * 6);
+        f = h * 6 - i;
+        p = v * (1 - s);
+        q = v * (1 - f * s);
+        t = v * (1 - (1 - f) * s);
+        switch (i % 6) {
+            case 0: r = v, g = t, b = p; break;
+            case 1: r = q, g = v, b = p; break;
+            case 2: r = p, g = v, b = t; break;
+            case 3: r = p, g = q, b = v; break;
+            case 4: r = t, g = p, b = v; break;
+            case 5: r = v, g = p, b = q; break;
+        }
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
     }
 
     private clamp(val: number, min: number, max: number) {
@@ -143,7 +210,7 @@ class Designer {
         this.draggingChip = false;
         this.draggingWindow = false;
         this.selectedChip = "";
-        this.details.hide();
+        this.selectedChipDetails.hide();
         if (event.button == 0) {
             const chip: Chip | null = this.getChipAtPos(this.mouseGridPos);
             if (chip != null) {
@@ -156,7 +223,7 @@ class Designer {
                 this.draggingChipOffset.y = chipPos.y - this.mouseGridPos.y;
                 this.selectedChip = chip.id;
                 this.draggingChip = true;
-                this.details.setChip(chip);
+                this.selectedChipDetails.setChip(chip);
             }
         } else if (event.button == 1) {
             this.draggingWindow = true;
@@ -182,6 +249,7 @@ class Designer {
         if (this.draggingChip) {
             const sChip = this.content.getChip(this.selectedChip);
             if (sChip != null) {
+                const orgPos = { ...sChip.pos };
                 const pos: Vec2 = { ...this.mouseGridPos };
                 pos.x += this.draggingChipOffset.x;
                 pos.y += this.draggingChipOffset.y;
@@ -190,13 +258,25 @@ class Designer {
                 pos.y -= size.y * 0.5;
                 const gridPos = this.snapPos2Grid(pos);
                 sChip.setPos(gridPos, this.gridSize);
+                for (const oChip of this.content.chips) {
+                    if (oChip.id == sChip.id) continue;
+                    if (oChip.intersects(sChip)) {
+                        sChip.setPos(orgPos, this.gridSize);
+                        break;
+                    }
+                }
             }
         }
         this.draggingChip = false;
         this.draggingWindow = false;
         if (this.selectedChip != "") {
-            this.details.show();
+            this.selectedChipDetails.show();
         }
+    }
+    private mouseLeave(event: MouseEvent) {
+        this.updateMousePos(event);
+        this.draggingChip = false;
+        this.draggingWindow = false;
     }
 
     private mouseRightClick(event: MouseEvent) {
@@ -245,7 +325,7 @@ class Designer {
     public get chipEdge(): number { return 0.28; }
 
     public run(): Designer {
-        this.details.hide();
+        this.selectedChipDetails.hide();
         if (this.running) return this;
         this.running = true;
         this.update(0);
@@ -271,7 +351,7 @@ class Designer {
         this.canvas.height = window.innerHeight;
 
 
-        this.context.fillStyle = "white";
+        this.context.fillStyle = this.backgroundColour;
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.context.fillStyle = "#00F";
@@ -290,9 +370,6 @@ class Designer {
         if (this.debug) {
             this.drawFPSGraph(delta, { x: 0, y: this.canvas.height - 120 }, { x: 520, y: 120 });
             this.context.fillText([Object.values(this.mouseGridPos), Object.values(this.snapPos2Grid(this.mouseGridPos))].toString(), 0, 0);
-            this.context.textBaseline = "bottom";
-            this.context.textAlign = "right";
-            this.context.fillText(JSON.stringify([this.baseChip, ChipType], null, 2), this.canvas.width, this.canvas.height);
         }
 
     }
