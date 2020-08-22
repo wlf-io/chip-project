@@ -1,0 +1,18 @@
+<nav class="nav flex-column">
+	{% for item in items %}
+		{% if item.type == "break" %}
+			<hr style="width:100%; margin: 5px 2px;">
+		{% else %}
+			<a class="nav-link {{item.class}}" data-type="{{item.type}}" data-value="{{item.value|json_encode()|escape}}" href="#">
+				{{ item.text }}
+				{% if item.type == "menu" %}
+					<span data-child="child" style="float: right;">&gt;</span>
+				{% endif %}
+			</a>
+		{% endif %}
+
+		<!--
+										        {{ item|json_encode()}}
+										    -->
+	{% endfor %}
+</nav>

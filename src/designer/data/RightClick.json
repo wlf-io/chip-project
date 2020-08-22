@@ -1,0 +1,10 @@
+{
+    "Remove": {
+        "data": [
+            "remove"
+        ],
+        "requirements": [
+            "target-chip"
+        ]
+    }
+}

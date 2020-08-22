@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "esModuleInterop": true,
+        "noImplicitAny": true,
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "outDir": "dist/public",
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "node_modules/*"
+            ]
+        },
+        "removeComments": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "incremental": true,
+        "target": "ES2018",
+        "resolveJsonModule": true
+    },
+    "include": [
+        "src/compiler/index.ts",
+        "src/designer/index.ts",
+        "src/designer/declare.d.ts",
+        "src/executer/index.ts",
+        "src/common/**/*"
+    ]
+}

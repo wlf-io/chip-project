@@ -1,0 +1,292 @@
+{
+    "+": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} + {{input_B}};",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "-": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} - {{input_B}};",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "*": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} * {{input_B}};",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "^": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} ** {{input_B}};",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "OR": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} || {{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "NOR": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = !{{input_A}} && !{{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "AND": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} && {{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "NAND": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = !({{input_A}} && {{input_B}});",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "!": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = !{{input_A}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "/": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} / {{input_B}};",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    ">": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} > {{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "<": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} < {{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    "<=": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} <= {{input_B}};",
+        "type": "logic",
+        "description": "sums A and B"
+    },
+    ">=": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} >= {{input_B}};",
+        "type": "logic",
+        "description": "checks a > B"
+    },
+    "==": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} === {{input_B}};",
+        "type": "logic",
+        "description": "checks A is equal to B"
+    },
+    "!=": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{input_A}} !== {{input_B}};",
+        "type": "logic",
+        "description": "checks A is not equal to B"
+    },
+    "const": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "constants": [
+            "VAL"
+        ],
+        "inputs": [],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = {{constant_VAL}};",
+        "type": "value",
+        "description": "Outputs constant value"
+    },
+    "var": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "constants": [
+            "VAL"
+        ],
+        "inputs": [
+            "SET",
+            "VAL"
+        ],
+        "outputs": [
+            "VAL"
+        ],
+        "code": "{{constant_VAL}} = {{input_SET}} ? {{input_VAL}} : {{constant_VAL}}; {{output_R}} = {{constant_VAL}};",
+        "type": "value",
+        "description": "sums A and B"
+    }
+}
