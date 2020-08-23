@@ -69,11 +69,13 @@ class Designer {
         this.content.updateConnectionsForChip(this.baseChip);
 
         const chip = this.content.chips[0];
-        const pinA = this.baseChip.getInputPin(this.baseChip.inputs[0]);
-        const pinB = chip.getInputPin(chip.inputs[0]);
-        if (pinA && pinB) {
-            console.log("CONNECT BASE", pinA, pinB);
-            this.content.connect(pinA, pinB);
+        if (chip) {
+            const pinA = this.baseChip.getInputPin(this.baseChip.inputs[0]);
+            const pinB = chip.getInputPin(chip.inputs[0]);
+            if (pinA && pinB) {
+                console.log("CONNECT BASE", pinA, pinB);
+                this.content.connect(pinA, pinB);
+            }
         }
         console.log(ChipType.toJSON());
     }
