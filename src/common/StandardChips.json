@@ -288,5 +288,21 @@
         "code": "{{constant_VAL}} = {{input_SET}} ? {{input_VAL}} : {{constant_VAL}}; {{output_R}} = {{constant_VAL}};",
         "type": "value",
         "description": "sums A and B"
+    },
+    "split": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "VAL"
+        ],
+        "outputs": [
+            "A",
+            "B"
+        ],
+        "code": "{{output_A}} = {{input_VAL}};{{output_B}} = {{input_VAL}}",
+        "type": "value",
+        "description": "sums A and B"
     }
 }

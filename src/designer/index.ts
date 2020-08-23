@@ -16,7 +16,6 @@ ready(() => {
     if (canvas instanceof HTMLCanvasElement) {
         Designer.Factory("BaseChip")
             .setCanvas(canvas)
-            .setChipSize({ x: 8, y: 5 })
             .run();
     } else {
         console.error("HTML FAIL");

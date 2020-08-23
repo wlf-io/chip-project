@@ -65,13 +65,13 @@ class ChipDetails {
                     if (data.index == "x") size.x = parseInt(elem.value);
                     if (data.index == "y") size.y = parseInt(elem.value);
                     this.chip.setSize(size);
-                    this.setChip(this.chip);
                     break;
                 default:
                     break;
             }
         }
-        console.log(JSON.parse(JSON.stringify(this.chip)));
+        this.setChip(this.chip);
+        //console.log(JSON.parse(JSON.stringify(this.chip)));
     }
 
     public hide(): ChipDetails {
@@ -90,6 +90,12 @@ class ChipDetails {
     }
 
     setChip(chip: Chip): ChipDetails {
+        const active = document.activeElement;
+        let activeID = "";
+        if (active instanceof HTMLInputElement || active instanceof HTMLSelectElement) {
+            activeID = active.id;
+            console.log(activeID);
+        }
         this.chip = chip;
         this.container.innerHTML = this.template.render({ chip, types: { standard: ChipType.StandardTypeList(), custom: ChipType.CustomTypeList() }, base: ChipType.BaseChip == chip.type });
         return this;

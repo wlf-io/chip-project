@@ -35,11 +35,11 @@ module.exports = [
             ],
         },
         plugins: [
-            new CopyPlugin({
-                patterns: [
-                    { context: 'src/designer/public', from: './**/*', to: "." },
-                ]
-            }),
+            // new CopyPlugin({
+            //     patterns: [
+            //         { context: 'src/designer/public', from: './**/*', to: "." },
+            //     ]
+            // }),
             // new MiniCssExtractPlugin(),
             // new HtmlWebpackPlugin({
             //     excludeChunks: ["sw"],

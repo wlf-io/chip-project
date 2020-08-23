@@ -60,8 +60,8 @@
 			<label>Inputs</label>
 			{% for input in chip.inputs %}
 			<div class="col-md-3">
-				<input data-type="input" data-index="{{loop.index0}}" class="form-control" type="text"
-					value="{{ input }}" {{STANDARD ? 'disabled' : ''}}>
+				<input id="{{chip.id}}_input_{{loop.index0}}" data-type="input" data-index="{{loop.index0}}"
+					class="form-control" type="text" value="{{ input }}" {{STANDARD ? 'disabled' : ''}}>
 			</div>
 			{% endfor %}
 		</div>
@@ -69,8 +69,8 @@
 			<label>Outputs</label>
 			{% for output in chip.outputs %}
 			<div class="col-md-3">
-				<input data-type="output" data-index="{{loop.index0}}" class="form-control" type="text"
-					value="{{ output }}" {{STANDARD ? 'disabled' : ''}}>
+				<input id="{{chip.id}}_output_{{loop.index0}}" data-type="output" data-index="{{loop.index0}}"
+					class="form-control" type="text" value="{{ output }}" {{STANDARD ? 'disabled' : ''}}>
 			</div>
 			{% endfor %}
 		</div>

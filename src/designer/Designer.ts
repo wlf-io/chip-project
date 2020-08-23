@@ -1,5 +1,5 @@
-import { Chip, ChipContent, ChipType } from "./Chip";
-import { Vec2 } from "../common/Transform";
+import { Chip, ChipContent, ChipType, Connection, ChipPin } from "./Chip";
+import { Vec2, Vector2 } from "../common/Transform";
 import ChipDetails from "./ChipDetails";
 import RightClickMenu from "./RightClickMenu";
 import RightClickData from "./data/RightClick.json";
@@ -29,6 +29,8 @@ class Designer {
     private draggingWindow: boolean = false;
     private draggingWindowOffset: Vec2 = { x: 0, y: 0 };
     private rightClickPos: Vec2 = { x: 0, y: 0 };
+    private connectingPin: ChipPin | null = null;
+    private draggingPin: boolean = false;
 
     private mousePos: Vec2 = { x: 0, y: 0 };
     private mouseGridPos: Vec2 = { x: 0, y: 0 };
@@ -40,13 +42,18 @@ class Designer {
     private baseChip: Chip;
     private backgroundColour: string = "#FFF";
 
+    private fontSize: number = 12;
+
+    public static get SaveString(): string { return "CHIP_DESIGNER"; }
 
     public static Factory(chipType: string): Designer {
         return new Designer(chipType);
     }
 
     constructor(chipType: string) {
+        this.load();
         ChipType.BaseChip = chipType;
+        ChipType.Load();
         // this.setupTwigExtensions();
         this.baseChip = new Chip(chipType, chipType);
         this.selectedChipDetails = new ChipDetails();
@@ -57,10 +64,41 @@ class Designer {
         this.baseChipDetails.style.right = "20px";
         this.baseChipDetails.setChip(this.baseChip).show();
         this.setupContextMenu();
+        window.addEventListener("beforeunload", () => this.save());
+
+        this.content.updateConnectionsForChip(this.baseChip);
+
+        const chip = this.content.chips[0];
+        const pinA = this.baseChip.getInputPin(this.baseChip.inputs[0]);
+        const pinB = chip.getInputPin(chip.inputs[0]);
+        if (pinA && pinB) {
+            console.log("CONNECT BASE", pinA, pinB);
+            this.content.connect(pinA, pinB);
+        }
+        console.log(ChipType.toJSON());
     }
 
     private get content(): ChipContent {
-        return this.baseChip.getData().content;
+        return this.baseChip.content;
+    }
+
+    private save() {
+        window.localStorage.setItem(Designer.SaveString, JSON.stringify({
+            zoom: this.zoom,
+            topLeft: { ...this.topLeft },
+            debug: this.debug,
+        }));
+    }
+
+    private load() {
+        const json = window.localStorage.getItem(Designer.SaveString);
+        if (json) {
+            const data = JSON.parse(json);
+
+            this.zoom = parseInt(data.zoom ?? this.zoom);
+            this.topLeft = { ...(data.topLeft ?? this.topLeft) };
+            this.debug = data.debug ?? this.debug;
+        }
     }
 
     private setupContextMenu() {
@@ -85,7 +123,7 @@ class Designer {
         this.rightClick = new RightClickMenu(document.body, action => this.rightClickAction(action), "root", RightClickData);
     }
 
-    private get gridSize(): Vec2 { return { x: this.baseChip.size.x * 4, y: this.baseChip.size.y * 4 }; }
+    private get gridSize(): Vec2 { return this.baseChip.content.size; }
 
     public setChipSize(gridSize: Vec2): Designer {
         this.baseChip.setSize(gridSize);
@@ -121,7 +159,6 @@ class Designer {
         if (event.target instanceof HTMLElement && event.target.tagName.toUpperCase() == "BODY") {
             if (event.key == this.konami[this.konamiProgress]) {
                 this.konamiProgress++;
-                console.log(this.konamiProgress);
                 if (this.konamiProgress >= this.konami.length) {
                     this.konamiProgress = 0;
                     this.doKonami();
@@ -173,10 +210,15 @@ class Designer {
         return Math.min(Math.max(val, min), max);
     }
 
+    private pos2GridScale(pos: Vec2) {
+        return { x: pos.x / this.gridScale, y: pos.y / this.gridScale };
+    }
+
     private snapPos2Grid(pos: Vec2): Vec2 {
+        pos = this.pos2GridScale(pos);
         return {
-            x: this.clamp(Math.round(pos.x / this.gridScale), 0, this.gridSize.x - 1),
-            y: this.clamp(Math.round(pos.y / this.gridScale), 0, this.gridSize.y - 1)
+            x: this.clamp(Math.round(pos.x), 0, this.gridSize.x - 1),
+            y: this.clamp(Math.round(pos.y), 0, this.gridSize.y - 1)
         };
     }
 
@@ -189,17 +231,30 @@ class Designer {
         this.mouseGridPos.x = x + this.topLeft.x;
         this.mouseGridPos.y = y + this.topLeft.y;
     }
+    private getPinAtPos(pos: Vec2): ChipPin | null {
+        const chip = this.getChipAtPos(pos, 0.25);
+        if (chip) {
+            pos = this.pos2GridScale(pos);
+            return chip.getPinAtPos(pos);
+        }
+        return null;
+    }
 
-    private getChipAtPos(pos: Vec2): Chip | null {
+    private getChipAtPos(pos: Vec2, pad: number | null = null): Chip | null {
+        pad ??= this.chipEdge * 0.5;
+        const gPos = this.pos2GridScale(pos);
         const chips = this.content.chips;
-        for (let i = 0; i < chips.length; i++) {
-            const chip = chips[i];
-            const [tl, br] = chip.chipBounds(this.gridScale, 0.3);
-            if (pos.x >= tl.x && pos.y >= tl.y) {
-                if (pos.x <= br.x && pos.y <= br.y) {
-                    return chip;
-                }
+        for (const chip of chips) {
+            if (chip.intersects({ top: gPos.y, left: gPos.x, bottom: gPos.y, right: gPos.x }, pad)) {
+                return chip;
             }
+
+            // const [tl, br] = chip.chipBounds(this.gridScale, 0.3);
+            // if (pos.x >= tl.x && pos.y >= tl.y) {
+            //     if (pos.x <= br.x && pos.y <= br.y) {
+            //         return chip;
+            //     }
+            // }
         }
         return null;
     }
@@ -207,6 +262,7 @@ class Designer {
     private mouseDown(event: MouseEvent) {
         this.updateMousePos(event);
         this.rightClick.hide();
+        this.draggingPin = false;
         this.draggingChip = false;
         this.draggingWindow = false;
         this.selectedChip = "";
@@ -214,7 +270,6 @@ class Designer {
         if (event.button == 0) {
             const chip: Chip | null = this.getChipAtPos(this.mouseGridPos);
             if (chip != null) {
-                console.log("CLICK", chip.id);
                 const chipPos = chip.gridPos(this.gridScale);
                 const chipSize = chip.gridSize(this.gridScale);
                 chipPos.x += chipSize.x * 0.5;
@@ -224,7 +279,14 @@ class Designer {
                 this.selectedChip = chip.id;
                 this.draggingChip = true;
                 this.selectedChipDetails.setChip(chip);
+            } else {
+                const pin = this.getPinAtPos(this.mouseGridPos);
+                if (pin) {
+                    this.connectingPin = pin;
+                    this.draggingPin = true;
+                }
             }
+
         } else if (event.button == 1) {
             this.draggingWindow = true;
             this.draggingWindowOffset = { ...this.mousePos };
@@ -236,7 +298,6 @@ class Designer {
     private mouseMove(event: MouseEvent) {
         this.updateMousePos(event);
         if (this.draggingWindow) {
-            console.log("DRAG");
             this.topLeft = { ...this.draggingWindowOffset };
             this.topLeft.x -= this.mousePos.x;
             this.topLeft.y -= this.mousePos.y;
@@ -246,29 +307,41 @@ class Designer {
     }
     private mouseUp(event: MouseEvent) {
         this.updateMousePos(event);
-        if (this.draggingChip) {
-            const sChip = this.content.getChip(this.selectedChip);
-            if (sChip != null) {
-                const orgPos = { ...sChip.pos };
-                const pos: Vec2 = { ...this.mouseGridPos };
-                pos.x += this.draggingChipOffset.x;
-                pos.y += this.draggingChipOffset.y;
-                const size = sChip.gridSize(this.gridScale);
-                pos.x -= size.x * 0.5;
-                pos.y -= size.y * 0.5;
-                const gridPos = this.snapPos2Grid(pos);
-                sChip.setPos(gridPos, this.gridSize);
-                for (const oChip of this.content.chips) {
-                    if (oChip.id == sChip.id) continue;
-                    if (oChip.intersects(sChip)) {
-                        sChip.setPos(orgPos, this.gridSize);
-                        break;
+        if (event.button == 0) {
+            if (this.draggingChip) {
+                const sChip = this.content.getChip(this.selectedChip);
+                if (sChip != null) {
+                    const orgPos = { ...sChip.pos };
+                    const pos: Vec2 = { ...this.mouseGridPos };
+                    pos.x += this.draggingChipOffset.x;
+                    pos.y += this.draggingChipOffset.y;
+                    const size = sChip.gridSize(this.gridScale);
+                    pos.x -= size.x * 0.5;
+                    pos.y -= size.y * 0.5;
+                    const gridPos = this.snapPos2Grid(pos);
+                    sChip.setPos(gridPos, this.gridSize);
+                    for (const oChip of this.content.chips) {
+                        if (oChip.id == sChip.id) continue;
+                        if (oChip.intersectsChip(sChip)) {
+                            sChip.setPos(orgPos, this.gridSize);
+                            break;
+                        }
                     }
+                    this.content.updateConnectionsForChip(sChip);
+                }
+            } else if (this.draggingPin) {
+                const pin = this.getPinAtPos(this.mouseGridPos);
+                if (this.connectingPin && pin) {
+                    if (pin.isEqualTo(this.connectingPin)) {
+                        this.content.disconnect(pin);
+                    } else this.content.connect(this.connectingPin, pin);
                 }
             }
         }
         this.draggingChip = false;
         this.draggingWindow = false;
+        this.draggingPin = false;
+        this.connectingPin = null;
         if (this.selectedChip != "") {
             this.selectedChipDetails.show();
         }
@@ -277,6 +350,7 @@ class Designer {
         this.updateMousePos(event);
         this.draggingChip = false;
         this.draggingWindow = false;
+        this.draggingPin = false;
     }
 
     private mouseRightClick(event: MouseEvent) {
@@ -290,7 +364,6 @@ class Designer {
     }
 
     private rightClickAction(action: string[]): void {
-        console.log(action);
         switch (action[0] ?? "") {
             case "add chip":
                 this.insertChipAtRightClick(action[1] ?? "+");
@@ -302,10 +375,12 @@ class Designer {
                 }
                 break;
             case "new custom chip":
-                ChipType.New(window.prompt("New chip type name:") ?? "");
+                const type = ChipType.New(window.prompt("New chip type name:") ?? "");
                 this.setupContextMenu();
+                if (type) this.insertChipAtRightClick(type);
                 break;
             default:
+                console.error("Unhandler Right Click", action);
                 break;
         }
     }
@@ -357,7 +432,8 @@ class Designer {
         this.context.fillStyle = "#00F";
         this.context.textBaseline = "top";
         this.context.textAlign = "left";
-        this.context.font = `normal bold ${Math.round(12 * this.zoom)}px sans-serif`;
+        this.fontSize = Math.round(12 * this.zoom);
+        this.context.font = `normal bold ${this.fontSize}px sans-serif`;
         this.context.fillText(this.zoom.toString(), 0, 0);
 
         const gridScale = this.gridScale;
@@ -366,12 +442,53 @@ class Designer {
 
         this.drawGrid(VX, VY, gridScale);
         this.drawChips(VX, VY, gridScale);
+        this.drawConnections(VX, VY, gridScale);
 
         if (this.debug) {
             this.drawFPSGraph(delta, { x: 0, y: this.canvas.height - 120 }, { x: 520, y: 120 });
             this.context.fillText([Object.values(this.mouseGridPos), Object.values(this.snapPos2Grid(this.mouseGridPos))].toString(), 0, 0);
         }
 
+    }
+
+    private drawConnections(VX: number, VY: number, gridScale: number) {
+        this.content.connections.forEach(con => {
+            this.drawConnection(con, VX, VY, gridScale);
+        });
+        if (this.draggingPin && this.connectingPin) {
+
+            let pinPos = this.content.getChip(this.connectingPin.chip)?.getPinPos(this.connectingPin);
+            if (pinPos) {
+                pinPos = this.pinPos2RenderPos(pinPos, this.connectingPin.output, gridScale);
+                this.context.strokeStyle = "#F00";
+                this.context.beginPath();
+                this.context.moveTo(VX + pinPos.x, VY + pinPos.y);
+                this.context.lineTo(this.mousePos.x, this.mousePos.y);
+                this.context.stroke();
+            }
+        }
+    }
+
+    private pinPos2RenderPos(pos: Vec2, output: boolean, gridScale: number) {
+        pos = Vector2.Multiply(pos, gridScale);
+        pos.y += (gridScale * (output ? 0.4 : -0.4));
+        return pos;
+    }
+
+    private drawConnection(con: Connection, VX: number, VY: number, gridScale: number) {
+        const sChip = this.content.getChip(con.source.chip);
+        const tChip = this.content.getChip(con.target.chip);
+        if (sChip == null || tChip == null) return;
+        const src: Vec2 = this.pinPos2RenderPos(sChip.getPinPos(con.source), con.source.output, gridScale);
+        const trg: Vec2 = this.pinPos2RenderPos(tChip.getPinPos(con.target), con.target.output, gridScale);
+
+        this.context.beginPath();
+        this.context.moveTo(VX + src.x, VY + src.y);
+        con.path.forEach(point => this.context.lineTo(VX + (point.x * gridScale), VY + (point.y * gridScale)));
+        this.context.lineTo(VX + trg.x, VY + trg.y);
+        //this.context.fillStyle = con.path.length > 2 ? "#333" : "#F00";
+        this.context.strokeStyle = con.validPath ? "#333" : "#F00";
+        this.context.stroke();
     }
 
     private drawChips(VX: number, VY: number, gridScale: number) {
@@ -397,16 +514,16 @@ class Designer {
         this.context.strokeStyle = "#DDD9";
 
         this.context.setLineDash([5, /**/3, 9, 3/**/, 0, 0, 5, 0]);
-        for (let x = 1; x < this.gridSize.x; x++) {
+        for (let x = 0; x <= this.gridSize.x; x++) {
             this.context.beginPath();
-            this.context.moveTo(VX + (gridScale * x), VY);
-            this.context.lineTo(VX + (gridScale * x), VY + (gridScale * this.gridSize.y));
+            this.context.moveTo(VX + (gridScale * x), VY - gridScale);
+            this.context.lineTo(VX + (gridScale * x), VY + (gridScale * this.gridSize.y) + gridScale);
             this.context.stroke();
         }
-        for (let y = 1; y < this.gridSize.y; y++) {
+        for (let y = 0; y <= this.gridSize.y; y++) {
             this.context.beginPath();
-            this.context.moveTo(VX, VY + (gridScale * y));
-            this.context.lineTo(VX + (gridScale * this.gridSize.x), VY + (gridScale * y));
+            this.context.moveTo(VX - gridScale, VY + (gridScale * y));
+            this.context.lineTo(VX + (gridScale * this.gridSize.x) + gridScale, VY + (gridScale * y));
             this.context.stroke();
         }
 
@@ -416,12 +533,35 @@ class Designer {
         this.context.fillStyle = "#333";
         this.context.strokeStyle = "#333";
         this.context.beginPath();
-        this.context.moveTo(VX, VY);
-        this.context.lineTo(VX + (gridScale * this.gridSize.x), VY);
-        this.context.lineTo(VX + (gridScale * this.gridSize.x), VY + (gridScale * this.gridSize.y));
-        this.context.lineTo(VX, VY + (gridScale * this.gridSize.y));
-        this.context.lineTo(VX, VY);
+        this.context.moveTo(VX - gridScale, VY - gridScale);
+        this.context.lineTo(VX + (gridScale * this.gridSize.x) + gridScale, VY - gridScale);
+        this.context.lineTo(VX + (gridScale * this.gridSize.x) + gridScale, VY + (gridScale * this.gridSize.y) + gridScale);
+        this.context.lineTo(VX - gridScale, VY + (gridScale * this.gridSize.y) + gridScale);
+        this.context.closePath();
         this.context.stroke();
+
+        this.context.textAlign = "center";
+        this.context.textBaseline = "middle";
+        this.baseChip.inputs.forEach((input, i) => {
+            if (input && input.length) {
+                const x = VX + ((i * ChipType.ChipScaleFactor) * gridScale) - (gridScale * 0.25);
+                const y = VY - (gridScale * 1.6);
+                this.context.fillStyle = "#888";
+                this.context.fillRect(x, y, gridScale * 0.5, gridScale);
+                this.context.fillStyle = "#333";
+                this.context.fillText(input, x + gridScale * 0.25, y - this.fontSize * 0.6);
+            }
+        });
+        this.baseChip.outputs.forEach((output, i) => {
+            if (output && output.length) {
+                const x = VX + ((i * ChipType.ChipScaleFactor) * gridScale) - (gridScale * 0.25);
+                const y = VY + (gridScale * this.gridSize.y) + (gridScale * 0.6);
+                this.context.fillStyle = "#888";
+                this.context.fillRect(x, y, gridScale * 0.5, gridScale);
+                this.context.fillStyle = "#333";
+                this.context.fillText(output, x + gridScale * 0.25, y + gridScale + this.fontSize * 0.6);
+            }
+        });
     }
 
     private drawChip(chip: Chip, gridScale: number, chipTl: Vec2) {
