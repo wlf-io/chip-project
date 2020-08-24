@@ -12,20 +12,20 @@
 		</div>
 		{% if not base %}
 			<!--div class="row">
-						<label>Type</label>
-						<select data-type="type" class="form-control">
-							<optgroup label="Standard">
-								{% for type in types.standard %}
-								<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type|upper}}</option>
-								{% endfor %}
-							</optgroup>
-							<optgroup label="Custom">
-								{% for type in types.custom %}
-								<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type}}</option>
-								{% endfor %}
-							</optgroup>
-						</select>
-					</div-->
+															<label>Type</label>
+															<select data-type="type" class="form-control">
+																<optgroup label="Standard">
+																	{% for type in types.standard %}
+																	<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type|upper}}</option>
+																	{% endfor %}
+																</optgroup>
+																<optgroup label="Custom">
+																	{% for type in types.custom %}
+																	<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type}}</option>
+																	{% endfor %}
+																</optgroup>
+															</select>
+														</div-->
 		{% endif %}
 		<div class="row">
 			<label>Size</label>
@@ -70,6 +70,13 @@
 					<input id="{{chip.id}}_output_{{loop.index0}}" data-type="output" data-index="{{loop.index0}}" class="form-control" type="text" value="{{ output }}" {{STANDARD ? 'disabled' : ''}}>
 				</div>
 			{% endfor %}
+		</div>
+		<div class="row">
+			<ul style="color:#F00;">
+				{% for error in chip.errors %}
+					<li>{{ error }}</li>
+				{% endfor %}
+			</ul>
 		</div>
 		<!--pre>{{dump()}}</pre-->
 	</form>

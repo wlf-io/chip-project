@@ -81,7 +81,7 @@ class Designer {
         this.setupRenderer();
         window.addEventListener("beforeunload", () => this.save());
 
-        this.content.updateConnectionsForChip(this.baseChip);
+        this.chipChange(null);
 
         console.log(ChipType.toJSON());
     }
@@ -269,6 +269,11 @@ class Designer {
         return null;
     }
 
+    private chipChange(chip: Chip | null) {
+        this.content.updateConnectionsForChip(chip);
+        this.baseChipDetails.render();
+    }
+
     private mouseDown(event: MouseEvent) {
         this.updateMousePos(event);
         this.rightClick.hide();
@@ -340,7 +345,7 @@ class Designer {
                             break;
                         }
                     }
-                    this.content.updateConnectionsForChip(sChip);
+                    this.chipChange(sChip);
                 }
             } else if (this._draggingPin) {
                 const pin = this.getPinAtPos(this._mouseGridPos);
@@ -348,6 +353,7 @@ class Designer {
                     if (pin.isEqualTo(this._connectingPin)) {
                         this.content.disconnect(pin);
                     } else this.content.connect(this._connectingPin, pin);
+                    this.chipChange(null);
                 }
             }
         }
@@ -383,7 +389,10 @@ class Designer {
                 break;
             case "remove":
                 const chip = this.getChipAtPos(this.rightClickPos);
-                if (chip) this.content.removeChip(chip);
+                if (chip) {
+                    this.content.removeChip(chip);
+                    this.chipChange(chip);
+                }
                 break;
             case "new custom chip":
                 const type = ChipType.New(window.prompt("New chip type name:") ?? "");
@@ -400,6 +409,7 @@ class Designer {
         const chip: Chip = new Chip(`${type}_${Date.now()}`, type);
         chip.setPos(this.snapPos2Grid(this.rightClickPos), this.gridSize);
         this.content.addChip(chip);
+        this.chipChange(chip);
     }
 
     private mouseWheel(e: WheelEvent) {

@@ -73,7 +73,7 @@ export class ChipType {
                 outputs: [...(raw.outputs ?? [])],
                 type: raw.type + "",
                 constants: [],
-                content: new ChipContent({ x: raw.size.x * ChipType.ChipScaleFactor, y: raw.size.y * ChipType.ChipScaleFactor }),
+                content: new ChipContent({ ...raw.size }),
                 description: raw.description ?? "",
                 code: null,
             };
@@ -95,7 +95,7 @@ export class ChipType {
             outputs: [...(chipData.outputs ?? def.outputs)],
             type: chipData.type ?? def.type,
             constants: [...(chipData.constants ?? def.constants)],
-            content: ChipContent.Factory({ x: size.x * ChipType.ChipScaleFactor, y: size.y * ChipType.ChipScaleFactor }).fromJSON(chipData.content ?? {}),
+            content: ChipContent.Factory({ ...size }).fromJSON(chipData.content ?? {}),
             description: chipData.description ?? def.description,
             code: null,
         };
@@ -136,7 +136,7 @@ export class ChipType {
         data.size.x = Math.min(Math.max(size.x, 1), type != ChipType.BaseChip ? ChipType.maxSize.x : 9);
         data.size.y = Math.min(Math.max(size.y, 1), type != ChipType.BaseChip ? ChipType.maxSize.y : 5);
         ChipType.SetType(type, data)
-            .content.setSize({ x: data.size.x * ChipType.ChipScaleFactor, y: data.size.y * ChipType.ChipScaleFactor });
+            .content.setSize({ ...data.size });
     }
 
     public static SetInput(type: string, index: number, name: string) {
@@ -246,6 +246,12 @@ export class Chip {
         return consts;
     };
     public get isBaseChip(): boolean { return this.type == ChipType.BaseChip; }
+
+    public get errors(): string[] {
+        return [
+            ...this.content.errors
+        ]
+    }
 
     public get rect(): rect {
         const size = this.size;
@@ -424,10 +430,16 @@ export class ChipContent {
 
     public get connections(): Connection[] { return [...this._connections]; }
     public get chips(): Chip[] { return Object.values(this._chips); }
-    public get size(): vec2 { return { ...this._size }; }
+    public get size(): vec2 { return { x: this._size.x * ChipType.ChipScaleFactor, y: this._size.y * ChipType.ChipScaleFactor }; }
 
     public static Factory(size: vec2): ChipContent {
         return new ChipContent(size);
+    }
+
+    public get errors(): string[] {
+        return [
+            ...this._connections.filter(con => !con.validPath).map(con => `Invalid Connection ${con.id}`)
+        ];
     }
 
     constructor(size: vec2) {
@@ -467,7 +479,10 @@ export class ChipContent {
     }
 
     public addChip(chip: Chip) {
-        if (chip.size.x > ChipType.maxSize.x || chip.size.y > ChipType.maxSize.y) return false;
+        if (chip.size.x < this._size.x || chip.size.y < this._size.y) {
+            alert("Chip to large");
+            return false;
+        }
         if (this._chips.hasOwnProperty(chip.id)) return false;
         this._chips[chip.id] = chip;
         ChipType.Save();
@@ -495,8 +510,23 @@ export class ChipContent {
         const start = sChip?.getPinPos(con.source);
         const end = eChip?.getPinPos(con.target);
         if (start && end && sChip && eChip) {
+            const oStart = { ...start };
+            //const oEnd = { ...end };
             start.y += con.source.output ? 1 : -1;
             end.y += con.target.output ? 1 : -1;
+
+            if (start.x == end.x) {
+                if (oStart.y == end.y) {
+                    con.validPath = true;
+                    return;
+                }
+            }
+            if (start.y == end.y) {
+                if (oStart.x == end.x) {
+                    con.validPath = true;
+                    return;
+                }
+            }
 
             const grid = this.getGridMatrix(con);
             const AStar = new AStarFinder({

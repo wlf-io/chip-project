@@ -94,7 +94,7 @@ class ChipDetails {
         return this;
     }
 
-    private render() {
+    public render() {
         if (this.chip == null) return;
         const active = document.activeElement;
         let activeID = "";
