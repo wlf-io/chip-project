@@ -86,6 +86,30 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./src/common/interfaces/source.interfaces.ts":
+/*!****************************************************!*\
+  !*** ./src/common/interfaces/source.interfaces.ts ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+eval("\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.IsPin = exports.IsConnection = exports.IsChip = exports.IsChipContent = exports.IsChipData = exports.IsChipSource = void 0;\nexports.IsChipSource = (data) => {\n    if (!IsObj(data))\n        return false;\n    console.log(\"SOURCE\", \"IS OBJ\");\n    if (!HasPropThatPasses(data, \"chip\", exports.IsChip))\n        return false;\n    console.log(\"SOURCE\", \"HAS CHIP\");\n    if (!HasPropThatPasses(data, \"chipData\", IsObj))\n        return false;\n    console.log(\"SOURCE\", \"HAS CHIPDATA\");\n    for (const [name, cd] of Object.entries(data[\"chipData\"])) {\n        console.groupCollapsed(\"CHIPDATA: \" + name);\n        if (!exports.IsChipData(cd)) {\n            console.groupEnd();\n            return false;\n        }\n        console.groupEnd();\n    }\n    return true;\n};\nexports.IsChipData = (data) => {\n    if (!IsObj(data))\n        return false;\n    console.log(\"CHIP DATA\", \"IS OBJ\", data);\n    if (!HasArrayProps(data, [\"inputs\", \"outputs\", \"constants\"]))\n        return false;\n    console.log(\"CHIP DATA\", \"HAS INPUTS OUTPUTS CONSTANTS\");\n    if (!ArrayOfType(data[\"inputs\"], \"string\"))\n        return false;\n    console.log(\"CHIP DATA\", \"INPUTS IS STRING[]\");\n    if (!ArrayOfType(data[\"outputs\"], \"string\"))\n        return false;\n    console.log(\"CHIP DATA\", \"OUTPUTS IS STRING[]\");\n    if (!ArrayOfType(data[\"constants\"], \"string\"))\n        return false;\n    console.log(\"CHIP DATA\", \"CONSTANTS IS STRING[]\");\n    if (!HasPropThatPasses(data, \"content\", exports.IsChipContent))\n        return false;\n    console.log(\"CHIP DATA\", \"HAS CHIPCONTENT\");\n    return true;\n};\nexports.IsChipContent = (data) => {\n    if (!IsObj(data))\n        return false;\n    console.log(\"CHIP CONTENT\", \"IS OBJ\");\n    if (!HasArrayProps(data, [\"chips\", \"connections\"]))\n        return false;\n    console.log(\"CHIP CONTENT\", \"HAS CHIPS CONNECTIONS\");\n    if (!ArrayContentPasses(data[\"chips\"], exports.IsChip))\n        return false;\n    console.log(\"CHIPCONTENT\", \"CHIPS IS CHIP[]\");\n    if (!ArrayContentPasses(data[\"connections\"], exports.IsConnection))\n        return false;\n    console.log(\"CHIPCONTENT\", \"CONNECTIONS IS CONNECTION[]\");\n    return true;\n};\nexports.IsChip = (data) => {\n    if (!IsObj(data))\n        return false;\n    if (!HasPropOfType(data, \"id\", \"string\"))\n        return false;\n    if (!HasPropOfType(data, \"name\", \"string\"))\n        return false;\n    if (!HasPropOfType(data, \"type\", \"string\"))\n        return false;\n    if (!HasPropThatPasses(data, \"constants\", IsObj))\n        return false;\n    return true;\n};\nexports.IsConnection = (data) => {\n    if (!IsObj(data))\n        return false;\n    if (!HasPropThatPasses(data, \"source\", exports.IsPin))\n        return false;\n    if (!HasPropThatPasses(data, \"target\", exports.IsPin))\n        return false;\n    return true;\n};\nexports.IsPin = (data) => {\n    if (!IsObj(data))\n        return false;\n    if (!HasPropOfType(data, \"chip\", \"string\"))\n        return false;\n    if (!HasPropOfType(data, \"name\", \"string\"))\n        return false;\n    if (!HasPropOfType(data, \"output\", \"boolean\"))\n        return false;\n    return true;\n};\nconst HasArrayProps = (obj, props) => {\n    for (const prop of props) {\n        if (!HasArrayProp(obj, prop))\n            return false;\n    }\n    return true;\n};\nconst HasArrayProp = (obj, prop) => {\n    return IsObj(obj) && HasProp(obj, prop) && obj[prop] instanceof Array;\n};\nconst HasPropOfType = (obj, prop, type) => {\n    return IsObj(obj) && HasProp(obj, prop) && typeof obj[prop] == type;\n};\nconst ArrayContentPasses = (arr, func) => {\n    for (const item of arr) {\n        if (!func(item))\n            return false;\n    }\n    return true;\n};\nconst ArrayOfType = (arr, type) => {\n    for (const item of arr) {\n        if (typeof item !== type)\n            return false;\n    }\n    return true;\n};\nconst HasPropThatPasses = (obj, prop, func) => {\n    return IsObj(obj) && HasProp(obj, prop) && func(obj[prop]);\n};\nconst HasProp = (obj, prop) => {\n    return IsObj(obj) && obj.hasOwnProperty(prop);\n};\nconst IsObj = (obj) => {\n    if (obj) {\n        if (typeof obj !== \"object\")\n            return false;\n        if (obj instanceof Array)\n            return false;\n        return true;\n    }\n    return false;\n};\n\n\n//# sourceURL=webpack:///./src/common/interfaces/source.interfaces.ts?");
+
+/***/ }),
+
+/***/ "./src/compiler/Compiler.ts":
+/*!**********************************!*\
+  !*** ./src/compiler/Compiler.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+eval("\nObject.defineProperty(exports, \"__esModule\", { value: true });\nconst source_interfaces_1 = __webpack_require__(/*! ../common/interfaces/source.interfaces */ \"./src/common/interfaces/source.interfaces.ts\");\nclass Compiler {\n    constructor() {\n        this.source = null;\n    }\n    loadSource(source) {\n        this.source = null;\n        const json = typeof source == \"string\" ? JSON.parse(source) : source;\n        console.groupCollapsed(\"SOURCE TEST\");\n        if (source_interfaces_1.IsChipSource(json)) {\n            this.source = json;\n        }\n        console.groupEnd();\n        if (this.source == null)\n            throw \"NOT VALID CHIP SOURCE\";\n    }\n    run() {\n        console.log(this.source);\n    }\n}\nexports.default = Compiler;\n\n\n//# sourceURL=webpack:///./src/compiler/Compiler.ts?");
+
+/***/ }),
+
 /***/ "./src/compiler/index.ts":
 /*!*******************************!*\
   !*** ./src/compiler/index.ts ***!
@@ -94,7 +118,7 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-eval("\nconsole.log(\"compiler\");\n\n\n//# sourceURL=webpack:///./src/compiler/index.ts?");
+eval("\nvar __importDefault = (this && this.__importDefault) || function (mod) {\n    return (mod && mod.__esModule) ? mod : { \"default\": mod };\n};\nObject.defineProperty(exports, \"__esModule\", { value: true });\nconst Compiler_1 = __importDefault(__webpack_require__(/*! ./Compiler */ \"./src/compiler/Compiler.ts\"));\nwindow.ChipCompiler = Compiler_1.default;\n\n\n//# sourceURL=webpack:///./src/compiler/index.ts?");
 
 /***/ }),
 
