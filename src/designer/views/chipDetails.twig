@@ -1,7 +1,8 @@
 {% set STANDARD = chip.isStandard %}
 <div class="card-header chipDetailsTitle">
 	<h4>{{chip.type}}
-		({{chip.id}})<span data-toggle="details" class="badge badge-secondary"> </span></h4>
+		({{chip.id}})<span data-toggle="details" class="badge badge-secondary"></span>
+	</h4>
 </div>
 <div class="card-body chipDetailsContent">
 	<form>
@@ -10,21 +11,21 @@
 			<input data-type="name" class="form-control" type="text" value="{{ chip.name }}">
 		</div>
 		{% if not base %}
-		<div class="row">
-			<label>Type</label>
-			<select data-type="type" class="form-control">
-				<optgroup label="Standard">
-					{% for type in types.standard %}
-					<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type|upper}}</option>
-					{% endfor %}
-				</optgroup>
-				<optgroup label="Custom">
-					{% for type in types.custom %}
-					<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type}}</option>
-					{% endfor %}
-				</optgroup>
-			</select>
-		</div>
+			<!--div class="row">
+						<label>Type</label>
+						<select data-type="type" class="form-control">
+							<optgroup label="Standard">
+								{% for type in types.standard %}
+								<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type|upper}}</option>
+								{% endfor %}
+							</optgroup>
+							<optgroup label="Custom">
+								{% for type in types.custom %}
+								<option value="{{type}}" {{ chip.type == type ? "selected" : ""}}>{{type}}</option>
+								{% endfor %}
+							</optgroup>
+						</select>
+					</div-->
 		{% endif %}
 		<div class="row">
 			<label>Size</label>
@@ -32,46 +33,42 @@
 				<div class="input-group-prepend">
 					<span class="input-group-text">X</span>
 				</div>
-				<input data-type="size" data-index="x" class="form-control" type="number" value="{{ chip.size.x }}"
-					{{STANDARD ? 'disabled' : ''}}>
+				<input data-type="size" data-index="x" class="form-control" type="number" value="{{ chip.size.x }}" {{STANDARD ? 'disabled' : ''}}>
 			</div>
 			<div class="input-group">
 				<div class="input-group-prepend">
 					<span class="input-group-text">Y</span>
 				</div>
-				<input data-type="size" data-index="y" class="form-control" type="number" value="{{ chip.size.y }}"
-					{{STANDARD ? 'disabled' : ''}}>
+				<input data-type="size" data-index="y" class="form-control" type="number" value="{{ chip.size.y }}" {{STANDARD ? 'disabled' : ''}}>
 			</div>
 		</div>
 		<div class="row">
 			<label>Constants</label>
 			{% for key,value in chip.constants %}
-			<div class="input-group">
-				<div class="input-group-prepend">
-					<span class="input-group-text">{{key}}</span>
+				<div class="input-group">
+					<div class="input-group-prepend">
+						<span class="input-group-text">{{key}}</span>
+					</div>
+					<input data-type="constant" data-index="{{key}}" class="form-control" type="text" value="{{ value }}">
 				</div>
-				<input data-type="constant" data-index="{{key}}" class="form-control" type="text" value="{{ value }}">
-			</div>
 			{% else %}
-			<input class="form-control" type="text" value="N/A" disabled>
+				<input class="form-control" type="text" value="N/A" disabled>
 			{% endfor %}
 		</div>
 		<div class="row">
 			<label>Inputs</label>
 			{% for input in chip.inputs %}
-			<div class="col-md-3">
-				<input id="{{chip.id}}_input_{{loop.index0}}" data-type="input" data-index="{{loop.index0}}"
-					class="form-control" type="text" value="{{ input }}" {{STANDARD ? 'disabled' : ''}}>
-			</div>
+				<div class="col-md-3">
+					<input id="{{chip.id}}_input_{{loop.index0}}" data-type="input" data-index="{{loop.index0}}" class="form-control" type="text" value="{{ input }}" {{STANDARD ? 'disabled' : ''}}>
+				</div>
 			{% endfor %}
 		</div>
 		<div class="row">
 			<label>Outputs</label>
 			{% for output in chip.outputs %}
-			<div class="col-md-3">
-				<input id="{{chip.id}}_output_{{loop.index0}}" data-type="output" data-index="{{loop.index0}}"
-					class="form-control" type="text" value="{{ output }}" {{STANDARD ? 'disabled' : ''}}>
-			</div>
+				<div class="col-md-3">
+					<input id="{{chip.id}}_output_{{loop.index0}}" data-type="output" data-index="{{loop.index0}}" class="form-control" type="text" value="{{ output }}" {{STANDARD ? 'disabled' : ''}}>
+				</div>
 			{% endfor %}
 		</div>
 		<!--pre>{{dump()}}</pre-->

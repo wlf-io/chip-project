@@ -11,13 +11,6 @@ function ready(fn: Function) {
 
 
 ready(() => {
-    const canvas = document.querySelector("canvas");
-
-    if (canvas instanceof HTMLCanvasElement) {
-        Designer.Factory("BaseChip")
-            .setCanvas(canvas)
-            .run();
-    } else {
-        console.error("HTML FAIL");
-    }
+    Designer.Factory("BaseChip")
+        .run();
 });

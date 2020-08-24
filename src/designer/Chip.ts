@@ -1,6 +1,6 @@
 import { Rect, Rectangle, Vec2, Vector2 } from "../common/Transform";
 import standardChips from "../common/StandardChips.json";
-import { AStarFinder } from "astar-typescript";
+import { AStarFinder } from "astar-typescript-cost";
 
 
 window.addEventListener("beforeunload", () => { ChipType.Save(); });
@@ -12,7 +12,7 @@ export class ChipType {
 
     private static _BaseChip = "base";
 
-    private static _ChipScaleFactor: number = 3;
+    private static _ChipScaleFactor: number = 4;
 
     public static get ChipScaleFactor(): number { return ChipType._ChipScaleFactor; }
 
@@ -26,6 +26,14 @@ export class ChipType {
         size.x -= 1;
         size.y -= 1;
         return size;
+    }
+
+    private static SetType(type: string, data: ChipTypeData, save: boolean = true) {
+        type = type.toLowerCase();
+        data = ChipType.Sanitize(data, type);
+        ChipType.types[type] = data;
+        if (save) ChipType.Save();
+        return data;
     }
 
     public static toJSON(): { [k: string]: any } {
@@ -52,8 +60,7 @@ export class ChipType {
     public static New(type: string): string | null {
         type = type.toLowerCase();
         if (ChipType.IsStandard(type)) return null;
-        ChipType.types[type] = ChipType.GetData(type);
-        ChipType.Save();
+        ChipType.SetType(type, ChipType.GetData(type));
         return type;
     }
 
@@ -62,8 +69,8 @@ export class ChipType {
             name = name.toLowerCase();
             const data: ChipTypeData = {
                 size: { ...raw.size },
-                inputs: [...raw.inputs].map(val => (val ?? "").toUpperCase()),
-                outputs: [...raw.outputs].map(val => (val ?? "").toUpperCase()),
+                inputs: [...(raw.inputs ?? [])],
+                outputs: [...(raw.outputs ?? [])],
                 type: raw.type + "",
                 constants: [],
                 content: new ChipContent({ x: raw.size.x * ChipType.ChipScaleFactor, y: raw.size.y * ChipType.ChipScaleFactor }),
@@ -73,30 +80,26 @@ export class ChipType {
             if (raw.hasOwnProperty("code")) data.code = raw.code;
             //@ts-ignore
             if (raw.hasOwnProperty("constants")) data.constants = [...raw.constants];
-            data.constants.map(val => (val ?? "").toUpperCase());
-            data.inputs.length = data.size.x + 1;
-            data.outputs.length = data.size.x + 1;
-            ChipType._standard[name] = data;
+            ChipType._standard[name] = ChipType.Sanitize(data, name);
         });
         ChipType.init = true;
     }
 
     private static LoadChip(name: string, chipData: { [k: string]: any }) {
-
+        name = name.toLowerCase();
         const def = ChipType.Default();
         const size = { ...(chipData.size ?? def.size) };
-        const chipType: ChipTypeData = {
+        const data: ChipTypeData = {
             size: size,
-            inputs: [...(chipData.inputs ?? def.inputs)].map(n => (n ?? "").toUpperCase()),
-            outputs: [...(chipData.outPuts ?? def.outputs)].map(n => (n ?? "").toUpperCase()),
+            inputs: [...(chipData.inputs ?? def.inputs)],
+            outputs: [...(chipData.outputs ?? def.outputs)],
             type: chipData.type ?? def.type,
             constants: [...(chipData.constants ?? def.constants)],
             content: ChipContent.Factory({ x: size.x * ChipType.ChipScaleFactor, y: size.y * ChipType.ChipScaleFactor }).fromJSON(chipData.content ?? {}),
             description: chipData.description ?? def.description,
             code: null,
         };
-
-        ChipType.types[name] = chipType;
+        ChipType.SetType(name, data);
     }
 
     public static GetData(type: string): ChipTypeData {
@@ -117,7 +120,7 @@ export class ChipType {
         return {
             size: { x: 1, y: 1 },
             inputs: ["A", "B"],
-            outputs: ["R"],
+            outputs: ["R", ""],
             type: "custom",
             constants: [],
             content: new ChipContent({ x: 1, y: 1 }),
@@ -128,16 +131,12 @@ export class ChipType {
 
     public static SetSize(type: string, size: Vec2) {
         if (ChipType.IsStandard(type)) return;
-        console.log("Set Size", type, size);
         type = type.toLowerCase();
         const data = ChipType.GetData(type);
         data.size.x = Math.min(Math.max(size.x, 1), type != ChipType.BaseChip ? ChipType.maxSize.x : 9);
         data.size.y = Math.min(Math.max(size.y, 1), type != ChipType.BaseChip ? ChipType.maxSize.y : 5);
-        data.inputs.length = data.size.x + 1;
-        data.outputs.length = data.size.x + 1;
-        data.content.setSize({ x: data.size.x * ChipType.ChipScaleFactor, y: data.size.y * ChipType.ChipScaleFactor });
-        ChipType.types[type] = data;
-        ChipType.Save();
+        ChipType.SetType(type, data)
+            .content.setSize({ x: data.size.x * ChipType.ChipScaleFactor, y: data.size.y * ChipType.ChipScaleFactor });
     }
 
     public static SetInput(type: string, index: number, name: string) {
@@ -148,8 +147,7 @@ export class ChipType {
         if (index >= 0 && index < data.inputs.length && (data.inputs.indexOf(name) < 0 || name.length < 1)) {
             data.inputs[index] = name;
         }
-        ChipType.types[type] = data;
-        ChipType.Save();
+        ChipType.SetType(type, data);
     }
 
     public static SetOutput(type: string, index: number, name: string) {
@@ -160,8 +158,7 @@ export class ChipType {
         if (index >= 0 && index < data.outputs.length && (data.outputs.indexOf(name) < 0 || name.length < 1)) {
             data.outputs[index] = name;
         }
-        ChipType.types[type] = data;
-        ChipType.Save();
+        ChipType.SetType(type, data);
     }
 
     public static Save() {
@@ -178,6 +175,22 @@ export class ChipType {
             const loaded = JSON.stringify(ChipType);
             console.assert(loaded === json, "LOAD FAILED", { stored: JSON.parse(json), loaded: JSON.parse(loaded) });
         }
+    }
+
+    public static Sanitize(data: ChipTypeData, type: string): ChipTypeData {
+        data = { ...data };
+        type = type.toLowerCase();
+        data.inputs.length = data.size.x + 1;
+        data.outputs.length = data.size.x + 1;
+        for (let i = 0; i < data.inputs.length; i++) {
+            data.inputs[i] = (data.inputs[i] || "").toUpperCase();
+        }
+        for (let i = 0; i < data.outputs.length; i++) {
+            data.outputs[i] = (data.outputs[i] || "").toUpperCase();
+        }
+        data.constants = data.constants.map(c => c.toUpperCase());
+
+        return data;
     }
 
 }
@@ -311,7 +324,6 @@ export class Chip {
 
     setConstant(key: string, value: string | number) {
         if (this.getData().constants.indexOf(key) >= 0) {
-            console.log("SET CONSTANT", this.id, this.getData().constants.indexOf(key), key, value);
             this._constants[key] = value;
         }
     }
@@ -348,8 +360,8 @@ export class Chip {
             const pin = this.getInputPin(input);
             if (pin) {
                 const pinPos = this.getPinPos(pin);
-                pinPos.y -= 0.375;
-                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), 0.1);
+                pinPos.y -= this.isBaseChip ? 1 : 0.375;
+                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
                 if (Rectangle.Intersect(pRect, rect)) return pin;
             }
         }
@@ -357,8 +369,8 @@ export class Chip {
             const pin = this.getOutputPin(output);
             if (pin) {
                 const pinPos = this.getPinPos(pin);
-                pinPos.y += 0.375;
-                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), 0.1);
+                pinPos.y += this.isBaseChip ? 1 : 0.375;
+                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
                 if (Rectangle.Intersect(pRect, rect)) return pin;
             }
         }
@@ -408,6 +420,7 @@ export class ChipContent {
     private _chips: { [k: string]: Chip } = {};
     private _connections: Connection[] = [];
     private _size!: Vec2;
+    private parentChip: Chip | null = null;
 
     public get connections(): Connection[] { return [...this._connections]; }
     public get chips(): Chip[] { return Object.values(this._chips); }
@@ -419,6 +432,10 @@ export class ChipContent {
 
     constructor(size: Vec2) {
         this.setSize(size);
+    }
+
+    setParentChip(chip: Chip) {
+        this.parentChip = chip;
     }
 
     public fromJSON(data: { [k: string]: any }): ChipContent {
@@ -440,9 +457,12 @@ export class ChipContent {
 
     setSize(size: Vec2) {
         this._size = { ...size };
+        this.chips.forEach(chip => chip.clamp2Grid(this.size));
+        this.updateConnectionsForChip(null);
     }
 
     public getChip(id: string): Chip | null {
+        if (this.parentChip && id == this.parentChip.id) return this.parentChip;
         return this._chips[id] ?? null;
     }
 
@@ -454,25 +474,27 @@ export class ChipContent {
         return true;
     }
 
-    public removeChip(id: string) {
-        if (this._chips.hasOwnProperty(id)) {
-            delete this._chips[id];
-            this._connections = this._connections.filter(connection => connection.source.chip != id && connection.target.chip != id);
+    public removeChip(chip: Chip) {
+        if (this._chips.hasOwnProperty(chip.id)) {
+            this.disconnectChip(chip);
+            delete this._chips[chip.id];
             ChipType.Save();
         }
     }
 
-    public updateConnectionsForChip(chip: Chip) {
-        const connections = this.connections.filter(con => con.usesChip(chip) || !con.customPath);
+    public updateConnectionsForChip(chip: Chip | null) {
+        let connections = this.connections.filter(con => (chip == null || con.usesChip(chip)) || !con.customPath);
         connections.forEach(con => con.clearPath());
         connections.sort((a, b) => a.distance(this) - b.distance(this));
         connections.forEach(con => this.updatePathForConnection(con));
     }
 
     private updatePathForConnection(con: Connection) {
-        const start = this.getChip(con.source.chip)?.getPinPos(con.source);
-        const end = this.getChip(con.target.chip)?.getPinPos(con.target);
-        if (start && end) {
+        const sChip = this.getChip(con.source.chip);
+        const eChip = this.getChip(con.target.chip);
+        const start = sChip?.getPinPos(con.source);
+        const end = eChip?.getPinPos(con.target);
+        if (start && end && sChip && eChip) {
             start.y += con.source.output ? 1 : -1;
             end.y += con.target.output ? 1 : -1;
 
@@ -480,9 +502,14 @@ export class ChipContent {
             const AStar = new AStarFinder({
                 grid: {
                     matrix: grid,
+                    maxCost: 10,
                 },
+                //heuristic: "Euclidean",
                 diagonalAllowed: false,
             });
+
+            if (sChip.isBaseChip) start.y = Math.max(Math.min(start.y, this.size.y), 0);
+            if (eChip.isBaseChip) end.y = Math.max(Math.min(end.y, this.size.y), 0);
 
             try {
                 const path = AStar.findPath(start, end).map(p => { return { x: p[0], y: p[1] }; });
@@ -502,23 +529,36 @@ export class ChipContent {
         this._connections = this._connections.filter(con => !con.usesPin(pin));
     }
 
+    public disconnectChip(chip: Chip) {
+        this._connections = this._connections.filter(con => !con.usesChip(chip));
+    }
+
     public connect(pinA: ChipPin, pinB: ChipPin, layer: number = 0): boolean {
         for (const con of this.connections) {
             if (con.usesPin(pinA) || con.usesPin(pinB)) return false;
         }
         console.log("NOT YET CONNECTED", this.getChip(pinA.chip)?.isBaseChip, this.getChip(pinB.chip)?.isBaseChip);
-        if (pinA.output == pinB.output && !(this.getChip(pinA.chip)?.isBaseChip || this.getChip(pinB.chip)?.isBaseChip)) return false;
-        console.log("O 2 O PASS");
-        const connection = new Connection();
-        connection.layer = layer;
-        connection.source = pinA;
-        connection.target = pinB;
-        this.updatePathForConnection(connection);
-        this._connections.push(connection);
-        return true;
+        const chipA = this.getChip(pinA.chip);
+        const chipB = this.getChip(pinB.chip);
+
+        if (chipA && chipB) {
+            const oneIsBase = (chipA.isBaseChip || chipB.isBaseChip) && !(chipA.isBaseChip && chipB.isBaseChip);
+            if (oneIsBase) {
+                if (pinA.output != pinB.output) return false;
+            } else if (pinA.output == pinB.output) return false;
+            console.log("O 2 O PASS");
+            const connection = new Connection();
+            connection.layer = layer;
+            connection.source = pinA;
+            connection.target = pinB;
+            this.updatePathForConnection(connection);
+            this._connections.push(connection);
+            return true;
+        }
+        return false;
     }
 
-    public getGridMatrix(calcCon: Connection): number[][] {
+    public getGridMatrix(calcCon: Connection | null): number[][] {
         const grid: number[][] = [];
         for (let y = 0; y <= this.size.y; y++) {
             const line: number[] = [];
@@ -528,20 +568,25 @@ export class ChipContent {
             grid.push(line);
         };
 
-        const cons = this.connections.filter(con => con.layer == calcCon.layer && con.id !== calcCon.id);
+        let cons = this.connections;
+        if (calcCon) {
+            cons = cons.filter(con => con.layer == calcCon.layer && con.id !== calcCon.id);
+        }
         //console.log(calcCon.id, "GridIncludes", cons.map(con => con.id));
         cons.forEach(con => {
             con.path.forEach(p => {
-                grid[p.y][p.x] = 1;
+                grid[p.y][p.x] = 10;
             });
         });
 
         this.chips.forEach(chip => {
             const pos = chip.pos;
             const size = chip.size;
-            for (let y = 0; y <= size.y; y++) {
-                for (let x = 0; x <= size.x; x++) {
-                    grid[pos.y + y][pos.x + x] = 1;
+            for (let x = 0; x <= size.x; x++) {
+                if ((pos.y - 1) >= 0 && grid[pos.y - 1][pos.x + x] < 10 && chip.inputs[x].length) grid[pos.y - 1][pos.x + x] = 9;
+                if ((pos.y + 1 + size.y) < grid.length && grid[pos.y + 1 + size.y][pos.x + x] < 10 && chip.outputs[x].length) grid[pos.y + 1 + size.y][pos.x + x] = 9;
+                for (let y = 0; y <= size.y; y++) {
+                    grid[pos.y + y][pos.x + x] = 10;
                 }
             }
         });
@@ -579,6 +624,7 @@ export class Connection {
             path: this.path,
             source: this.source,
             target: this.target,
+            customPath: this.customPath,
         };
     }
 
@@ -605,6 +651,7 @@ export class Connection {
         this._path = [...(data.path ?? this.path)];
         this._source = ChipPin.Factory().fromJSON(data.source ?? {});
         this._target = ChipPin.Factory().fromJSON(data.target ?? {});
+        this.customPath = data.customPath ?? false;
         return this;
     }
 
