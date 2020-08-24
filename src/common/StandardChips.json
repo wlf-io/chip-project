@@ -304,5 +304,37 @@
         "code": "{{output_A}} = {{input_VAL}};{{output_B}} = {{input_VAL}}",
         "type": "value",
         "description": "sums A and B"
+    },
+    "min": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = Math.min({{input_A}},{{input_B}});",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "max": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = Math.max({{input_A}},{{input_B}});",
+        "type": "arithmatic",
+        "description": "sums A and B"
     }
 }

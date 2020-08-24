@@ -1,4 +1,5 @@
-import { Chip, ChipType } from "./Chip";
+import Chip from "./chip/Chip";
+import ChipType from "./chip/ChipType";
 import detailsTemplate from "./views/chipDetails.twig";
 import { twig, Template } from "twig";
 

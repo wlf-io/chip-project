@@ -57,15 +57,22 @@ export class Line {
 }
 
 export class Vec2 {
-    public static Sum(a: vec2, b: vec2) {
+
+    public static Swap(vec: vec2): vec2 {
+        return {
+            x: vec.y,
+            y: vec.x,
+        };
+    }
+    public static Sum(a: vec2, b: vec2): vec2 {
         return { x: a.x + b.x, y: a.y + b.y };
     }
 
-    public static Multiply(vec: vec2, by: number) {
+    public static Multiply(vec: vec2, by: number): vec2 {
         return { x: vec.x * by, y: vec.y * by };
     }
 
-    public static DistanceSquared(a: vec2, b: vec2) {
+    public static DistanceSquared(a: vec2, b: vec2): number {
         const x = a.x - b.x;
         const y = a.y - b.y;
         return (x * x) + (y * y);
@@ -75,17 +82,21 @@ export class Vec2 {
         return Math.sqrt(Vec2.DistanceSquared(a, b));
     }
 
-    public static Clamp(vec: vec2, min: number, max: number) {
+    public static Clamp(vec: vec2, min: number, max: number): vec2 {
         return {
             x: Math.min(Math.max(vec.x, min), max),
             y: Math.min(Math.max(vec.y, min), max),
         }
     }
-    public static ClampVec(vec: vec2, min: vec2, max: vec2) {
+    public static ClampVec(vec: vec2, min: vec2, max: vec2): vec2 {
         return {
             x: Math.min(Math.max(vec.x, min.x), max.x),
             y: Math.min(Math.max(vec.y, min.y), max.y),
         }
+    }
+
+    public static Equal(a: vec2, b: vec2): boolean {
+        return a.x == b.x && a.y == b.y;
     }
 }
 
@@ -122,7 +133,7 @@ export class Rect {
         };
     }
 
-    public static Intersect(rectA: rect, rectB: rect) {
+    public static Intersect(rectA: rect, rectB: rect): number {
         const x_overlap = Math.max(0, Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left));
         const y_overlap = Math.max(0, Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top));
         return x_overlap * y_overlap;

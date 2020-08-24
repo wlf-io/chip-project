@@ -23,7 +23,7 @@
     "include": [
         "src/compiler/index.ts",
         "src/designer/index.ts",
-        "src/designer/declare.d.ts",
+        "src/common/declare.d.ts",
         "src/executer/index.ts",
         "src/common/**/*"
     ]

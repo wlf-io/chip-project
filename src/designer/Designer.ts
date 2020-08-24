@@ -1,4 +1,4 @@
-import { Chip, ChipContent, ChipType, ChipPin, Connection } from "./Chip";
+import { Chip, ChipContent, ChipType, Connection, Pin } from "./chip";
 import { vec2 } from "../common/Transform";
 import ChipDetails from "./ChipDetails";
 import RightClickMenu from "./RightClickMenu";
@@ -31,14 +31,14 @@ class Designer {
     };
     //private lastTime: number = 0;
 
-    private _selectedChip: string = "";
+    private _selectedChip: Chip | null = null;
     private draggingChip: boolean = false;
     private draggingChipOffset: vec2 = { x: 0, y: 0 };
 
     private draggingWindow: boolean = false;
     private draggingWindowOffset: vec2 = { x: 0, y: 0 };
 
-    private _connectingPin: ChipPin | null = null;
+    private _connectingPin: Pin | null = null;
     private _draggingPin: boolean = false;
 
     private _mousePos: vec2 = { x: 0, y: 0 };
@@ -82,12 +82,11 @@ class Designer {
         window.addEventListener("beforeunload", () => this.save());
 
         this.chipChange(null);
-
-        console.log(ChipType.toJSON());
     }
 
 
-    public get selectedChip(): string { return this._selectedChip; }
+    public get selectedChip(): Chip | null { return this._selectedChip; }
+    public get selectedChipID(): string { return this._selectedChip?.id ?? ""; }
 
     //public get mouseGridPos(): Vec2 { return this._mouseGridPos; }
 
@@ -101,7 +100,7 @@ class Designer {
 
     public get ChipType(): ChipType { return ChipType; }
 
-    public get connectingPin(): ChipPin | null { return this._connectingPin; }
+    public get connectingPin(): Pin | null { return this._connectingPin; }
     public get mouseState() {
         return {
             pos: this._mousePos,
@@ -193,6 +192,16 @@ class Designer {
         if (event.altKey && event.shiftKey && event.ctrlKey && event.key === "D") {
             this._debug = !this._debug;
         }
+        if (event.key == "r" && this.draggingChip && this.selectedChip) {
+            this.selectedChip.rotate();
+        }
+        if (event.key == "Delete") {
+            if (this.draggingChip && this.selectedChip) {
+                this.draggingChip = false;
+                this.content.removeChip(this.selectedChip);
+                this._selectedChip = null;
+            }
+        }
         if (event.target instanceof HTMLElement && event.target.tagName.toUpperCase() == "BODY") {
             if (event.key == this.konami[this.konamiProgress]) {
                 this.konamiProgress++;
@@ -203,6 +212,7 @@ class Designer {
                 }
             } else this.konamiProgress = 0;
         } else this.konamiProgress = 0;
+        if (this.debug) console.log(event.key);
     }
 
     private clamp(val: number, min: number, max: number) {
@@ -237,7 +247,7 @@ class Designer {
         return this.content.connectionAtPos(gPos);
     }
 
-    private getPinAtPos(pos: vec2): ChipPin | null {
+    private getPinAtPos(pos: vec2): Pin | null {
         const gPos = this.pos2GridScale(pos);
         if (gPos.y < -0.5 || gPos.y > (this.gridSize.y + 0.5)) {
             return this.baseChip.getPinAtPos(gPos);
@@ -272,6 +282,11 @@ class Designer {
     private chipChange(chip: Chip | null) {
         this.content.updateConnectionsForChip(chip);
         this.baseChipDetails.render();
+        if (this.baseChip.errors.length < 1) {
+            const comp = new window.ChipCompiler();
+            comp.loadSource(JSON.stringify({ chip: this.baseChip.toJSON(), chipData: ChipType.toJSON() }));
+            comp.run();
+        }
     }
 
     private mouseDown(event: MouseEvent) {
@@ -280,7 +295,7 @@ class Designer {
         this._draggingPin = false;
         this.draggingChip = false;
         this.draggingWindow = false;
-        this._selectedChip = "";
+        this._selectedChip = null;
         this.selectedChipDetails.hide();
         if (event.button == 0) {
             const chip: Chip | null = this.getChipAtPos(this._mouseGridPos);
@@ -291,7 +306,7 @@ class Designer {
                 chipPos.y += chipSize.y * 0.5;
                 this.draggingChipOffset.x = chipPos.x - this._mouseGridPos.x;
                 this.draggingChipOffset.y = chipPos.y - this._mouseGridPos.y;
-                this._selectedChip = chip.id;
+                this._selectedChip = chip;
                 this.draggingChip = true;
                 this.selectedChipDetails.setChip(chip);
             } else {
@@ -327,7 +342,7 @@ class Designer {
         this.updateMousePos(event);
         if (event.button == 0) {
             if (this.draggingChip) {
-                const sChip = this.content.getChip(this._selectedChip);
+                const sChip = this._selectedChip;
                 if (sChip != null) {
                     const orgPos = { ...sChip.pos };
                     const pos: vec2 = { ...this._mouseGridPos };
@@ -361,7 +376,7 @@ class Designer {
         this.draggingWindow = false;
         this._draggingPin = false;
         this._connectingPin = null;
-        if (this._selectedChip != "") {
+        if (this._selectedChip != null) {
             this.selectedChipDetails.show();
         }
     }

@@ -1,5 +1,5 @@
 import { vec2, Vec2 } from "../common/Transform";
-import { Chip, ChipContent, ChipType, Connection } from "./Chip";
+import { Chip, ChipContent, ChipType, Connection, Pin } from "./chip";
 import Designer from "./Designer";
 
 class Renderer {
@@ -158,9 +158,8 @@ class Renderer {
         if (this.mouse.draggingPin && this.designer.connectingPin) {
             const pin = this.designer.connectingPin;
             const chip = content.getChip(pin.chip);
-            let pinPos = chip?.getPinPos(pin);
-            if (pinPos && chip) {
-                pinPos = this.pinPos2RenderPos(pinPos, pin.output, gridScale);
+            if (chip) {
+                const pinPos = this.getPinRenderPos(pin, chip, gridScale);
                 if (chip.isBaseChip) pinPos.y += (pin.output ? 0.5 : -0.5) * gridScale;
                 this.context.strokeStyle = this.colours.highlight;
                 this.context.beginPath();
@@ -171,10 +170,9 @@ class Renderer {
         }
     }
 
-    private pinPos2RenderPos(pos: vec2, output: boolean, gridScale: number) {
-        pos = Vec2.Multiply(pos, gridScale);
-        pos.y += (gridScale * (output ? 0.4 : -0.4));
-        return pos;
+    private getPinRenderPos(pin: Pin, chip: Chip, gridScale: number) {
+        const pos = Vec2.Sum(chip.getPinPos(pin), Vec2.Multiply(chip.getPinPosOutOffset(pin), 0.4));
+        return Vec2.Multiply(pos, gridScale);
     }
 
     private drawConnection(con: Connection, content: ChipContent, VX: number, VY: number, gridScale: number) {
@@ -183,10 +181,10 @@ class Renderer {
         if (sChip == null || tChip == null) return;
 
         if (this.mouse.draggingChip) {
-            if (sChip.id == this.designer.selectedChip || tChip.id == this.designer.selectedChip) return;
+            if (sChip.id == this.designer.selectedChipID || tChip.id == this.designer.selectedChipID) return;
         }
-        const src: vec2 = this.pinPos2RenderPos(sChip.getPinPos(con.source), con.source.output, gridScale);
-        const trg: vec2 = this.pinPos2RenderPos(tChip.getPinPos(con.target), con.target.output, gridScale);
+        const src: vec2 = this.getPinRenderPos(con.source, sChip, gridScale);
+        const trg: vec2 = this.getPinRenderPos(con.target, tChip, gridScale);
 
         if (sChip.isBaseChip) src.y += (con.source.output ? 0.5 : -0.5) * gridScale;
         if (tChip.isBaseChip) trg.y += (con.target.output ? 0.5 : -0.5) * gridScale;
@@ -213,19 +211,17 @@ class Renderer {
 
     private drawChips(content: ChipContent, VX: number, VY: number, gridScale: number) {
         content.chips.forEach(chip => {
-            if (chip.id == this.designer.selectedChip && this.mouse.draggingChip) return;
+            if (this.mouse.draggingChip && chip.id == this.designer.selectedChipID) return;
             const chipTl = chip.gridPos(gridScale);
             chipTl.x += VX;
             chipTl.y += VY;
             this.drawChip(chip, gridScale, chipTl);
         });
 
-        if (this.mouse.draggingChip) {
-            const sChip = content.getChip(this.designer.selectedChip);
-            if (sChip != null) {
-                const chipSize = sChip.gridSize(gridScale);
-                this.drawChip(sChip, gridScale, { x: this.mouse.gridPos.x + this.mouse.draggingChipOffset.x + VX - (chipSize.x * 0.5), y: this.mouse.gridPos.y + this.mouse.draggingChipOffset.y + VY - (chipSize.y * 0.5) });
-            }
+        if (this.mouse.draggingChip && this.designer.selectedChip) {
+            const sChip = this.designer.selectedChip;
+            const chipSize = sChip.gridSize(gridScale);
+            this.drawChip(sChip, gridScale, { x: this.mouse.gridPos.x + this.mouse.draggingChipOffset.x + VX - (chipSize.x * 0.5), y: this.mouse.gridPos.y + this.mouse.draggingChipOffset.y + VY - (chipSize.y * 0.5) });
         }
     }
 
@@ -282,29 +278,55 @@ class Renderer {
         });
     }
 
-    private drawChip(chip: Chip, gridScale: number, chipTl: vec2) {
+    private drawChip(chip: Chip, gridScale: number, chipTL: vec2) {
 
         //const chipTl: Vec2 = chip.gridPos(gridSize);
         const chipSize: vec2 = chip.gridSize(gridScale);
 
+        this.context.save();
+
+        this.context.translate(chipTL.x, chipTL.y);
+
+        const offset: vec2 = { x: 0, y: 0 };
+
+        switch (chip.rotation) {
+            case 1:
+                offset.y -= chipSize.y;
+                this.context.rotate(Math.PI * 0.5 * chip.rotation);
+                break;
+            case 2:
+                offset.x -= chipSize.x;
+                offset.y -= chipSize.y;
+                this.context.rotate(Math.PI * 0.5 * chip.rotation);
+                break;
+            case 3:
+                offset.x -= chipSize.x;
+                this.context.rotate(Math.PI * 0.5 * chip.rotation);
+                break;
+            case 0:
+            default:
+                break;
+        }
+
+
         const edge = Math.floor(gridScale * this.chipEdge);
         const rim = Math.floor(gridScale * (this.chipEdge * this.chipEdge));
 
-        const tl: vec2 = { x: chipTl.x - edge, y: chipTl.y - edge };
+        const tl: vec2 = { x: offset.x - edge, y: offset.y - edge };
         const size: vec2 = { x: chipSize.x + (edge * 2), y: chipSize.y + (edge * 2) };
 
 
         this.context.fillStyle = this.colours.chip.pin;
         for (let i = 0; i < chip.inputs.length; i++) {
             if (typeof chip.inputs[i] !== "string" || chip.inputs[i].length < 1) continue;
-            this.context.fillRect(chipTl.x + (i * gridScale) - rim, chipTl.y - Math.floor(gridScale * 0.5), rim * 2, Math.floor(gridScale * 0.5));
+            this.context.fillRect(offset.x + (i * gridScale) - rim, offset.y - Math.floor(gridScale * 0.5), rim * 2, Math.floor(gridScale * 0.5));
         }
         for (let i = 0; i < chip.outputs.length; i++) {
             if (typeof chip.outputs[i] !== "string" || chip.outputs[i].length < 1) continue;
-            this.context.fillRect(chipTl.x + (i * gridScale) - rim, chipTl.y + chipSize.y, rim * 2, Math.floor(gridScale * 0.5));
+            this.context.fillRect(offset.x + (i * gridScale) - rim, offset.y + chipSize.y, rim * 2, Math.floor(gridScale * 0.5));
         }
 
-        this.context.fillStyle = chip.id == this.designer.selectedChip ? this.colours.highlight : this.colours.chip.fore;
+        this.context.fillStyle = chip.id == this.designer.selectedChipID ? this.colours.highlight : this.colours.chip.fore;
         this.context.beginPath();
         this.context.moveTo(tl.x, tl.y);
         this.context.lineTo(tl.x + size.x, tl.y);
@@ -312,7 +334,7 @@ class Renderer {
         this.context.closePath();
         this.context.fill();
 
-        this.context.fillStyle = chip.id == this.designer.selectedChip ? "#F00" : this.colours.chip.back;
+        this.context.fillStyle = chip.id == this.designer.selectedChipID ? "#F00" : this.colours.chip.back;
         this.context.beginPath();
         this.context.moveTo(tl.x, tl.y);
         this.context.lineTo(tl.x + size.x, tl.y + size.y);
@@ -324,7 +346,7 @@ class Renderer {
         this.context.fillRect(tl.x + (rim * 2), tl.y + (rim * 2), size.x - (rim * 4), size.y - (rim * 4));
 
         this.context.beginPath();
-        this.context.arc(chipTl.x + chipSize.x - rim, chipTl.y + chipSize.y - rim, edge * 0.5, 0, 2 * Math.PI, false);
+        this.context.arc(offset.x + chipSize.x - rim, offset.y + chipSize.y - rim, edge * 0.5, 0, 2 * Math.PI, false);
         this.context.fillStyle = "#777";
         this.context.fill();
 
@@ -335,8 +357,9 @@ class Renderer {
         if (this.designer.debug) {
             this.context.textBaseline = "top";
             this.context.textAlign = "left";
-            this.context.fillText(Object.values(chip.pos).toString(), chipTl.x, chipTl.y);
+            this.context.fillText(Object.values(chip.pos).toString() + " " + chip.type, offset.x, offset.y);
         }
+        this.context.restore();
     }
 
     private drawFPSGraph(delta: number, pos: vec2, size: vec2) {
