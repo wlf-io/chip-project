@@ -1,4 +1,4 @@
-import { Vec2, Vector2 } from "../common/Transform";
+import { vec2, Vec2 } from "../common/Transform";
 import { Chip, ChipContent, ChipType, Connection } from "./Chip";
 import Designer from "./Designer";
 
@@ -57,7 +57,7 @@ class Renderer {
 
     public get chipEdge(): number { return this.style.chipEdge; }
 
-    public get topLeft(): Vec2 { return this.designer.topLeft; }
+    public get topLeft(): vec2 { return this.designer.topLeft; }
 
     public get zoom(): number { return this._zoom; }
 
@@ -65,7 +65,7 @@ class Renderer {
 
     private get mouse() { return this.designer.mouse; }
 
-    private get gridSize(): Vec2 { return this.designer.gridSize; }
+    private get gridSize(): vec2 { return this.designer.gridSize; }
 
 
 
@@ -171,8 +171,8 @@ class Renderer {
         }
     }
 
-    private pinPos2RenderPos(pos: Vec2, output: boolean, gridScale: number) {
-        pos = Vector2.Multiply(pos, gridScale);
+    private pinPos2RenderPos(pos: vec2, output: boolean, gridScale: number) {
+        pos = Vec2.Multiply(pos, gridScale);
         pos.y += (gridScale * (output ? 0.4 : -0.4));
         return pos;
     }
@@ -181,11 +181,26 @@ class Renderer {
         const sChip = content.getChip(con.source.chip);
         const tChip = content.getChip(con.target.chip);
         if (sChip == null || tChip == null) return;
-        const src: Vec2 = this.pinPos2RenderPos(sChip.getPinPos(con.source), con.source.output, gridScale);
-        const trg: Vec2 = this.pinPos2RenderPos(tChip.getPinPos(con.target), con.target.output, gridScale);
+
+        if (this.mouse.draggingChip) {
+            if (sChip.id == this.designer.selectedChip || tChip.id == this.designer.selectedChip) return;
+        }
+        const src: vec2 = this.pinPos2RenderPos(sChip.getPinPos(con.source), con.source.output, gridScale);
+        const trg: vec2 = this.pinPos2RenderPos(tChip.getPinPos(con.target), con.target.output, gridScale);
 
         if (sChip.isBaseChip) src.y += (con.source.output ? 0.5 : -0.5) * gridScale;
         if (tChip.isBaseChip) trg.y += (con.target.output ? 0.5 : -0.5) * gridScale;
+
+        this.context.setLineDash(
+            (
+                [
+                    [3, 0, 0, 3, 0, 3],
+                    [0, 3, 3, 0, 0, 3],
+                    [0, 3, 0, 3, 3, 0],
+                ]
+            )[Math.floor(this.designer.time.total / 50) % 3]
+        );
+
 
         this.context.beginPath();
         this.context.moveTo(VX + src.x, VY + src.y);
@@ -193,6 +208,7 @@ class Renderer {
         this.context.lineTo(VX + trg.x, VY + trg.y);
         this.context.strokeStyle = con.validPath ? (this.colours.wire[con.layer] ?? "#333") : this.colours.highlight;
         this.context.stroke();
+        this.context.setLineDash([]);
     }
 
     private drawChips(content: ChipContent, VX: number, VY: number, gridScale: number) {
@@ -266,16 +282,16 @@ class Renderer {
         });
     }
 
-    private drawChip(chip: Chip, gridScale: number, chipTl: Vec2) {
+    private drawChip(chip: Chip, gridScale: number, chipTl: vec2) {
 
         //const chipTl: Vec2 = chip.gridPos(gridSize);
-        const chipSize: Vec2 = chip.gridSize(gridScale);
+        const chipSize: vec2 = chip.gridSize(gridScale);
 
         const edge = Math.floor(gridScale * this.chipEdge);
         const rim = Math.floor(gridScale * (this.chipEdge * this.chipEdge));
 
-        const tl: Vec2 = { x: chipTl.x - edge, y: chipTl.y - edge };
-        const size: Vec2 = { x: chipSize.x + (edge * 2), y: chipSize.y + (edge * 2) };
+        const tl: vec2 = { x: chipTl.x - edge, y: chipTl.y - edge };
+        const size: vec2 = { x: chipSize.x + (edge * 2), y: chipSize.y + (edge * 2) };
 
 
         this.context.fillStyle = this.colours.chip.pin;
@@ -323,7 +339,7 @@ class Renderer {
         }
     }
 
-    private drawFPSGraph(delta: number, pos: Vec2, size: Vec2) {
+    private drawFPSGraph(delta: number, pos: vec2, size: vec2) {
         if (this.designer.time.last < 1) return;
         this.frameTimes.push(delta);
         const max: number = this.frameTimes.reduce((m, c) => { return c > m ? c : m; }, 0);

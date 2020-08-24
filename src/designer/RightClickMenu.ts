@@ -1,4 +1,4 @@
-import type { Vec2 } from "../common/Transform";
+import type { vec2 } from "../common/Transform";
 import menuTemplate from "./views/rightClickMenu.twig";
 import { twig, Template } from "twig";
 
@@ -74,7 +74,7 @@ class RightClickMenu {
         return result;
     }
 
-    show(pos: Vec2, reqs: string[] = []) {
+    show(pos: vec2, reqs: string[] = []) {
         pos = { ...pos };
         pos.x -= 2;
         pos.y -= 2;

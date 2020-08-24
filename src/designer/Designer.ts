@@ -1,5 +1,5 @@
-import { Chip, ChipContent, ChipType, ChipPin } from "./Chip";
-import { Vec2 } from "../common/Transform";
+import { Chip, ChipContent, ChipType, ChipPin, Connection } from "./Chip";
+import { vec2 } from "../common/Transform";
 import ChipDetails from "./ChipDetails";
 import RightClickMenu from "./RightClickMenu";
 import RightClickData from "./data/RightClick.json";
@@ -20,7 +20,7 @@ class Designer {
 
     private zoom: number = 1;
 
-    private _topLeft: Vec2 = { x: -25, y: -25 };
+    private _topLeft: vec2 = { x: -25, y: -25 };
 
     private running: boolean = false;
 
@@ -33,17 +33,17 @@ class Designer {
 
     private _selectedChip: string = "";
     private draggingChip: boolean = false;
-    private draggingChipOffset: Vec2 = { x: 0, y: 0 };
+    private draggingChipOffset: vec2 = { x: 0, y: 0 };
 
     private draggingWindow: boolean = false;
-    private draggingWindowOffset: Vec2 = { x: 0, y: 0 };
+    private draggingWindowOffset: vec2 = { x: 0, y: 0 };
 
     private _connectingPin: ChipPin | null = null;
     private _draggingPin: boolean = false;
 
-    private _mousePos: Vec2 = { x: 0, y: 0 };
-    private _mouseGridPos: Vec2 = { x: 0, y: 0 };
-    private rightClickPos: Vec2 = { x: 0, y: 0 };
+    private _mousePos: vec2 = { x: 0, y: 0 };
+    private _mouseGridPos: vec2 = { x: 0, y: 0 };
+    private rightClickPos: vec2 = { x: 0, y: 0 };
 
     private _debug: boolean = false;
 
@@ -97,7 +97,7 @@ class Designer {
 
     public get debug(): boolean { return this._debug; }
 
-    public get topLeft(): Vec2 { return { ...this._topLeft }; }
+    public get topLeft(): vec2 { return { ...this._topLeft }; }
 
     public get ChipType(): ChipType { return ChipType; }
 
@@ -162,9 +162,9 @@ class Designer {
         this.rightClick = new RightClickMenu(document.body, action => this.rightClickAction(action), "root", RightClickData);
     }
 
-    public get gridSize(): Vec2 { return this.baseChip.content.size; }
+    public get gridSize(): vec2 { return this.baseChip.content.size; }
 
-    public setChipSize(gridSize: Vec2): Designer {
+    public setChipSize(gridSize: vec2): Designer {
         this.baseChip.setSize(gridSize);
         this.content.chips.forEach(chip => chip.clamp2Grid(this.gridSize));
         this.baseChipDetails.setChip(this.baseChip);
@@ -209,12 +209,12 @@ class Designer {
         return Math.min(Math.max(val, min), max);
     }
 
-    public pos2GridScale(pos: Vec2) {
+    public pos2GridScale(pos: vec2) {
         const scale = this.renderer.gridScale;
         return { x: pos.x / scale, y: pos.y / scale };
     }
 
-    public snapPos2Grid(pos: Vec2): Vec2 {
+    public snapPos2Grid(pos: vec2): vec2 {
         pos = this.pos2GridScale(pos);
         return {
             x: this.clamp(Math.round(pos.x), 0, this.gridSize.x - 1),
@@ -231,10 +231,15 @@ class Designer {
         this._mouseGridPos.x = x + this._topLeft.x;
         this._mouseGridPos.y = y + this._topLeft.y;
     }
-    private getPinAtPos(pos: Vec2): ChipPin | null {
+
+    private getConnectionAtPos(pos: vec2): Connection | null {
+        const gPos = this.pos2GridScale(pos);
+        return this.content.connectionAtPos(gPos);
+    }
+
+    private getPinAtPos(pos: vec2): ChipPin | null {
         const gPos = this.pos2GridScale(pos);
         if (gPos.y < -0.5 || gPos.y > (this.gridSize.y + 0.5)) {
-            console.log("GET PIN", gPos, this.baseChip.getPinAtPos(gPos));
             return this.baseChip.getPinAtPos(gPos);
         } else {
             const chip = this.getChipAtPos(pos, 0.25);
@@ -245,7 +250,7 @@ class Designer {
         return null;
     }
 
-    private getChipAtPos(pos: Vec2, pad: number | null = null): Chip | null {
+    private getChipAtPos(pos: vec2, pad: number | null = null): Chip | null {
         pad ??= this.chipEdge * 0.5;
         const gPos = this.pos2GridScale(pos);
         const chips = this.content.chips;
@@ -289,6 +294,9 @@ class Designer {
                 if (pin) {
                     this._connectingPin = pin;
                     this._draggingPin = true;
+                } else {
+                    const con = this.getConnectionAtPos(this._mouseGridPos);
+                    if (con) console.log(con.id);
                 }
             }
 
@@ -317,7 +325,7 @@ class Designer {
                 const sChip = this.content.getChip(this._selectedChip);
                 if (sChip != null) {
                     const orgPos = { ...sChip.pos };
-                    const pos: Vec2 = { ...this._mouseGridPos };
+                    const pos: vec2 = { ...this._mouseGridPos };
                     pos.x += this.draggingChipOffset.x;
                     pos.y += this.draggingChipOffset.y;
                     const size = sChip.gridSize(this.renderer.gridScale);

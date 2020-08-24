@@ -58,7 +58,6 @@ class ChipDetails {
                     break;
                 case "type":
                     this.chip.type = elem.value;
-                    this.setChip(this.chip);
                     break;
                 case "size":
                     const size = this.chip.size;
@@ -70,7 +69,7 @@ class ChipDetails {
                     break;
             }
         }
-        this.setChip(this.chip);
+        window.setTimeout(() => this.render(), 10);
         //console.log(JSON.parse(JSON.stringify(this.chip)));
     }
 
@@ -90,15 +89,23 @@ class ChipDetails {
     }
 
     setChip(chip: Chip): ChipDetails {
+        this.chip = chip;
+        this.render();
+        return this;
+    }
+
+    private render() {
+        if (this.chip == null) return;
         const active = document.activeElement;
         let activeID = "";
         if (active instanceof HTMLInputElement || active instanceof HTMLSelectElement) {
             activeID = active.id;
-            console.log(activeID);
         }
-        this.chip = chip;
-        this.container.innerHTML = this.template.render({ chip, types: { standard: ChipType.StandardTypeList(), custom: ChipType.CustomTypeList() }, base: ChipType.BaseChip == chip.type });
-        return this;
+        this.container.innerHTML = this.template.render({ chip: this.chip, types: { standard: ChipType.StandardTypeList(), custom: ChipType.CustomTypeList() }, base: ChipType.BaseChip == this.chip.type });
+        if (activeID.length) {
+            const elem = document.getElementById(activeID);
+            if (elem) elem.focus();
+        }
     }
 
     private mouseUp(event: MouseEvent) {

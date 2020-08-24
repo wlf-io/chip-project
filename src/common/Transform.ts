@@ -1,32 +1,87 @@
-export type Vec2 = { x: number, y: number };
-export type Rect = { left: number, right: number, top: number, bottom: number };
+export type vec2 = { x: number, y: number };
+export type rect = { left: number, right: number, top: number, bottom: number };
 
-export class Vector2 {
-    public static Sum(a: Vec2, b: Vec2) {
+export type line = { start: vec2, end: vec2 };
+
+export class Line {
+    public static Intersect(a: line, b: line): boolean {
+        return Line.IntersectMathCheck(...Line.IntersectMath(a, b));
+    }
+
+    public static IntersectPoint(a: line, b: line): vec2 | null {
+        const [uA, uB] = Line.IntersectMath(a, b);
+
+        if (Line.IntersectMathCheck(uA, uB)) {
+            return {
+                x: a.start.x + (uA * (a.end.x - a.start.x)),
+                y: a.start.y + (uB * (a.end.y - a.start.y)),
+            };
+        }
+
+        return null;
+    }
+
+    private static IntersectMath(a: line, b: line): [number, number] {
+        const x1 = a.start.x;
+        const y1 = a.start.y;
+        const x2 = a.end.x;
+        const y2 = a.end.y;
+
+        const x3 = b.start.x;
+        const y3 = b.start.y;
+        const x4 = b.end.x;
+        const y4 = b.end.y;
+
+        return [
+            ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)),
+            ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
+        ];
+    }
+
+    private static IntersectMathCheck(a: number, b: number): boolean {
+        return a >= 0 && a <= 1 && b >= 0 && b <= 1
+    }
+
+    public static IntersectRect(line: line, rect: rect): boolean {
+        const lines = Rect.To4Lines(rect);
+        for (const l of lines) {
+            if (Line.Intersect(line, l)) return true;
+        }
+        return false;
+    }
+
+    public static IntersectRectPoints(line: line, rect: rect): vec2[] {
+        const lines = Rect.To4Lines(rect);
+        return lines.map(l => Line.IntersectPoint(line, l)).filter((i): i is vec2 => i != null);
+    }
+}
+
+export class Vec2 {
+    public static Sum(a: vec2, b: vec2) {
         return { x: a.x + b.x, y: a.y + b.y };
     }
 
-    public static Multiply(vec: Vec2, by: number) {
+    public static Multiply(vec: vec2, by: number) {
         return { x: vec.x * by, y: vec.y * by };
     }
 
-    public static DistanceSquared(a: Vec2, b: Vec2) {
+    public static DistanceSquared(a: vec2, b: vec2) {
         const x = a.x - b.x;
         const y = a.y - b.y;
         return (x * x) + (y * y);
     }
 
-    public static Distance(a: Vec2, b: Vec2): number {
-        return Math.sqrt(Vector2.DistanceSquared(a, b));
+    public static Distance(a: vec2, b: vec2): number {
+        return Math.sqrt(Vec2.DistanceSquared(a, b));
     }
 
-    public static Clamp(vec: Vec2, min: number, max: number) {
+    public static Clamp(vec: vec2, min: number, max: number) {
         return {
             x: Math.min(Math.max(vec.x, min), max),
             y: Math.min(Math.max(vec.y, min), max),
         }
     }
-    public static ClampVec(vec: Vec2, min: Vec2, max: Vec2) {
+    public static ClampVec(vec: vec2, min: vec2, max: vec2) {
         return {
             x: Math.min(Math.max(vec.x, min.x), max.x),
             y: Math.min(Math.max(vec.y, min.y), max.y),
@@ -34,17 +89,21 @@ export class Vector2 {
     }
 }
 
-export class Rectangle {
+export class Rect {
 
-    public static FromVec2(vec: Vec2): Rect {
+    public static FromVec2(vec: vec2): rect {
         return { top: vec.y, bottom: vec.y, left: vec.x, right: vec.x };
     }
 
-    public static FromPosAndSize(pos: Vec2, size: Vec2): Rect {
-        return Rectangle.FromTLAndBR(pos, Vector2.Sum(pos, size));
+    public static FromPosAndSize(pos: vec2, size: vec2): rect {
+        return Rect.FromTLAndBR(pos, Vec2.Sum(pos, size));
     }
 
-    public static FromTLAndBR(tl: Vec2, br: Vec2): Rect {
+    public static FromPosAndPad(pos: vec2, pad: number) {
+        return Rect.Pad({ top: pos.y, bottom: pos.y, left: pos.x, right: pos.x }, pad);
+    }
+
+    public static FromTLAndBR(tl: vec2, br: vec2): rect {
 
         return {
             top: tl.y,
@@ -54,7 +113,7 @@ export class Rectangle {
         };
     }
 
-    public static Pad(rect: Rect, pad: number): Rect {
+    public static Pad(rect: rect, pad: number): rect {
         return {
             top: rect.top - pad,
             bottom: rect.bottom + pad,
@@ -63,9 +122,18 @@ export class Rectangle {
         };
     }
 
-    public static Intersect(rectA: Rect, rectB: Rect) {
+    public static Intersect(rectA: rect, rectB: rect) {
         const x_overlap = Math.max(0, Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left));
         const y_overlap = Math.max(0, Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top));
         return x_overlap * y_overlap;
+    }
+
+    public static To4Lines(rect: rect): [line, line, line, line] {
+        return [
+            { start: { x: rect.left, y: rect.top }, end: { x: rect.right, y: rect.top } },
+            { start: { x: rect.right, y: rect.top }, end: { x: rect.right, y: rect.bottom } },
+            { start: { x: rect.right, y: rect.bottom }, end: { x: rect.left, y: rect.bottom } },
+            { start: { x: rect.left, y: rect.bottom }, end: { x: rect.left, y: rect.top } },
+        ]
     }
 }

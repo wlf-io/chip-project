@@ -1,4 +1,4 @@
-import { Rect, Rectangle, Vec2, Vector2 } from "../common/Transform";
+import { Line, line, rect, Rect, vec2, Vec2 } from "../common/Transform";
 import standardChips from "../common/StandardChips.json";
 import { AStarFinder } from "astar-typescript-cost";
 
@@ -21,7 +21,7 @@ export class ChipType {
     public static get BaseChip(): string { return ChipType._BaseChip; }
     public static set BaseChip(name: string) { ChipType._BaseChip = name.toLowerCase(); }
 
-    public static get maxSize(): Vec2 {
+    public static get maxSize(): vec2 {
         const size = { ...ChipType.GetData(ChipType.BaseChip).size };
         size.x -= 1;
         size.y -= 1;
@@ -129,7 +129,7 @@ export class ChipType {
         }
     }
 
-    public static SetSize(type: string, size: Vec2) {
+    public static SetSize(type: string, size: vec2) {
         if (ChipType.IsStandard(type)) return;
         type = type.toLowerCase();
         const data = ChipType.GetData(type);
@@ -196,7 +196,7 @@ export class ChipType {
 }
 
 interface ChipTypeData {
-    size: Vec2;
+    size: vec2;
     inputs: string[];
     outputs: string[];
     constants: string[];
@@ -208,17 +208,17 @@ interface ChipTypeData {
 
 export class Chip {
     private _id: string;
-    private _pos: Vec2 = { x: 0, y: 0 };
+    private _pos: vec2 = { x: 0, y: 0 };
     private _type: string = "AND";
     private _name: string = "";
 
     private _constants: { [k: string]: number | string } = {};
 
-    public static Factory(id: string, type: string, pos: Vec2 = { x: 1, y: 1 }): Chip {
+    public static Factory(id: string, type: string, pos: vec2 = { x: 1, y: 1 }): Chip {
         return new Chip(id, type, pos);
     }
 
-    constructor(id: string, type: string, pos: Vec2 = { x: 1, y: 1 }) {
+    constructor(id: string, type: string, pos: vec2 = { x: 1, y: 1 }) {
         this.type = type;
         ChipType.New(type);
         this._id = id.toLowerCase();
@@ -237,8 +237,8 @@ export class Chip {
     public get content(): ChipContent { return this.getData().content; }
     public get inputs(): string[] { return [...this.getData().inputs]; }
     public get outputs(): string[] { return [...this.getData().outputs]; }
-    public get size(): Vec2 { return { ...this.getData().size }; }
-    public get pos(): Vec2 { return { ...this._pos }; }
+    public get size(): vec2 { return { ...this.getData().size }; }
+    public get pos(): vec2 { return { ...this._pos }; }
     public get description(): string { return this.getData().description; }
     public get constants(): { [k: string]: number | string } {
         const consts: { [k: string]: number | string } = {};
@@ -247,7 +247,7 @@ export class Chip {
     };
     public get isBaseChip(): boolean { return this.type == ChipType.BaseChip; }
 
-    public get rect(): Rect {
+    public get rect(): rect {
         const size = this.size;
         return {
             left: this.pos.x,
@@ -286,10 +286,10 @@ export class Chip {
         };
     }
 
-    intersects(other: Rect, pad: number = 0.5): number {
-        return Rectangle.Intersect(
-            Rectangle.Pad(other, pad),
-            Rectangle.Pad(this.rect, pad)
+    intersects(other: rect, pad: number = 0.5): number {
+        return Rect.Intersect(
+            Rect.Pad(other, pad),
+            Rect.Pad(this.rect, pad)
         );
     }
 
@@ -301,7 +301,7 @@ export class Chip {
         return ChipType.GetData(this.type);
     }
 
-    public setPos(pos: Vec2, gridSize: Vec2): Chip {
+    public setPos(pos: vec2, gridSize: vec2): Chip {
         this._pos = { ...pos };
         this.clamp2Grid(gridSize);
         return this;
@@ -317,7 +317,7 @@ export class Chip {
         return this;
     }
 
-    setSize(size: Vec2): Chip {
+    setSize(size: vec2): Chip {
         ChipType.SetSize(this.type, size);
         return this;
     }
@@ -329,12 +329,12 @@ export class Chip {
     }
 
 
-    public gridPos(gridScale: number): Vec2 {
-        return Vector2.Multiply(this._pos, gridScale);
+    public gridPos(gridScale: number): vec2 {
+        return Vec2.Multiply(this._pos, gridScale);
     }
 
-    public gridSize(gridScale: number): Vec2 {
-        return Vector2.Multiply(this.size, gridScale);
+    public gridSize(gridScale: number): vec2 {
+        return Vec2.Multiply(this.size, gridScale);
     }
 
     // public chipBounds(gridScale: number, edge: number = 0): [Vec2, Vec2] {
@@ -348,21 +348,21 @@ export class Chip {
     //     return [pos, size];
     // }
 
-    public clamp2Grid(gridSize: Vec2) {
-        this._pos = Vector2.ClampVec(this.pos, { x: 0, y: 0 }, { x: gridSize.x - this.size.x, y: gridSize.y - this.size.y });
+    public clamp2Grid(gridSize: vec2) {
+        this._pos = Vec2.ClampVec(this.pos, { x: 0, y: 0 }, { x: gridSize.x - this.size.x, y: gridSize.y - this.size.y });
     }
 
-    public getPinAtPos(pos: Vec2): ChipPin | null {
+    public getPinAtPos(pos: vec2): ChipPin | null {
 
-        const pRect = Rectangle.Pad(Rectangle.FromVec2(pos), 0.1);
+        const pRect = Rect.Pad(Rect.FromVec2(pos), 0.1);
 
         for (const input of this.inputs) {
             const pin = this.getInputPin(input);
             if (pin) {
                 const pinPos = this.getPinPos(pin);
                 pinPos.y -= this.isBaseChip ? 1 : 0.375;
-                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
-                if (Rectangle.Intersect(pRect, rect)) return pin;
+                const rect = Rect.Pad(Rect.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
+                if (Rect.Intersect(pRect, rect)) return pin;
             }
         }
         for (const output of this.outputs) {
@@ -370,16 +370,16 @@ export class Chip {
             if (pin) {
                 const pinPos = this.getPinPos(pin);
                 pinPos.y += this.isBaseChip ? 1 : 0.375;
-                const rect = Rectangle.Pad(Rectangle.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
-                if (Rectangle.Intersect(pRect, rect)) return pin;
+                const rect = Rect.Pad(Rect.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
+                if (Rect.Intersect(pRect, rect)) return pin;
             }
         }
 
         return null;
     }
 
-    public getPinPos(pin: ChipPin): Vec2 {
-        const pos: Vec2 = { x: 0, y: 0 };
+    public getPinPos(pin: ChipPin): vec2 {
+        const pos: vec2 = { x: 0, y: 0 };
         const index = pin.output ? this.outputs.indexOf(pin.name) : this.inputs.indexOf(pin.name);
         if (index >= 0) {
             if (this.isBaseChip) {
@@ -419,18 +419,18 @@ export class Chip {
 export class ChipContent {
     private _chips: { [k: string]: Chip } = {};
     private _connections: Connection[] = [];
-    private _size!: Vec2;
+    private _size!: vec2;
     private parentChip: Chip | null = null;
 
     public get connections(): Connection[] { return [...this._connections]; }
     public get chips(): Chip[] { return Object.values(this._chips); }
-    public get size(): Vec2 { return { ...this._size }; }
+    public get size(): vec2 { return { ...this._size }; }
 
-    public static Factory(size: Vec2): ChipContent {
+    public static Factory(size: vec2): ChipContent {
         return new ChipContent(size);
     }
 
-    constructor(size: Vec2) {
+    constructor(size: vec2) {
         this.setSize(size);
     }
 
@@ -455,7 +455,7 @@ export class ChipContent {
         };
     }
 
-    setSize(size: Vec2) {
+    setSize(size: vec2) {
         this._size = { ...size };
         this.chips.forEach(chip => chip.clamp2Grid(this.size));
         this.updateConnectionsForChip(null);
@@ -537,16 +537,44 @@ export class ChipContent {
         for (const con of this.connections) {
             if (con.usesPin(pinA) || con.usesPin(pinB)) return false;
         }
-        console.log("NOT YET CONNECTED", this.getChip(pinA.chip)?.isBaseChip, this.getChip(pinB.chip)?.isBaseChip);
         const chipA = this.getChip(pinA.chip);
         const chipB = this.getChip(pinB.chip);
 
         if (chipA && chipB) {
-            const oneIsBase = (chipA.isBaseChip || chipB.isBaseChip) && !(chipA.isBaseChip && chipB.isBaseChip);
+            const bothAreBase = (chipA.isBaseChip && chipB.isBaseChip);
+            const oneIsBase = (chipA.isBaseChip || chipB.isBaseChip) && !bothAreBase;
             if (oneIsBase) {
                 if (pinA.output != pinB.output) return false;
             } else if (pinA.output == pinB.output) return false;
-            console.log("O 2 O PASS");
+
+            if (bothAreBase) console.log("BOTH BASE", { [pinA.name]: pinA.output, [pinB.name]: pinB.output });
+            if (bothAreBase) {
+                if (pinA.output) {
+                    const pinS = pinA;
+                    pinA = pinB;
+                    pinB = pinS;
+                }
+            } else if (oneIsBase) {
+                if (pinA.output) {
+                    if (chipA.isBaseChip) {
+                        const pinS = pinA;
+                        pinA = pinB;
+                        pinB = pinS;
+                    }
+                } else {
+                    if (chipB.isBaseChip) {
+                        const pinS = pinA;
+                        pinA = pinB;
+                        pinB = pinS;
+                    }
+                }
+            } else if (!pinA.output) {
+                const pinS = pinA;
+                pinA = pinB;
+                pinB = pinS;
+            }
+            if (bothAreBase) console.log("BOTH BASE", { [pinA.name]: pinA.output, [pinB.name]: pinB.output });
+
             const connection = new Connection();
             connection.layer = layer;
             connection.source = pinA;
@@ -556,6 +584,18 @@ export class ChipContent {
             return true;
         }
         return false;
+    }
+
+    public connectionAtPos(pos: vec2): Connection | null {
+        const rect = Rect.FromPosAndPad(pos, 0.1);
+        for (const con of this._connections) {
+            if (con.pathIntersectsRect(rect)) return con;
+        }
+        return null;
+    }
+
+    public getConnection(id: string): Connection | null {
+        return this._connections.find(con => con.id == id) ?? null;
     }
 
     public getGridMatrix(calcCon: Connection | null): number[][] {
@@ -596,7 +636,7 @@ export class ChipContent {
 
 export class Connection {
     public layer: number = 0;
-    private _path: Vec2[] = [];
+    private _path: vec2[] = [];
     private _source: ChipPin = new ChipPin();
     private _target: ChipPin = new ChipPin();
     public validPath: boolean = false;
@@ -628,11 +668,29 @@ export class Connection {
         };
     }
 
+    public pathIntersectsRect(rect: rect): boolean {
+        for (const line of this.pathLine) {
+            if (Line.IntersectRect(line, rect)) return true;
+        }
+        return false;
+    }
+
+    public get pathLine(): line[] {
+        const line: line[] = [];
+        for (let i = 1; i < this._path.length; i++) {
+            line.push({
+                start: this._path[i - 1],
+                end: this._path[i]
+            });
+        }
+        return line;
+    }
+
     clearPath(): Connection {
         return this.setPath([]);
     }
 
-    setPath(path: Vec2[]): Connection {
+    setPath(path: vec2[]): Connection {
         this._path = [...path];
         return this;
     }
@@ -641,7 +699,7 @@ export class Connection {
         const src = content.getChip(this.source.chip)?.getPinPos(this.source);
         const trg = content.getChip(this.target.chip)?.getPinPos(this.target);
         if (src && trg) {
-            return Vector2.DistanceSquared(src, trg);
+            return Vec2.DistanceSquared(src, trg);
         }
         return 1000000;
     }
@@ -659,7 +717,7 @@ export class Connection {
     public set source(connector: ChipPin) { this._source = connector; }
     public get target(): ChipPin { return this._target; }
     public set target(connector: ChipPin) { this._target = connector; }
-    public get path(): Vec2[] { return [...this._path]; }
+    public get path(): vec2[] { return [...this._path]; }
 }
 
 export class ChipPin {
