@@ -1,0 +1,30 @@
+function {{chipName}}({% for const in chipConstants %}_{{const}}{{ loop.last ? '' : ', '}}{% endfor %}){
+
+    //ChipConstants
+    {% for const in chipConstants %}let {{const}} = _{{const}};
+    {% endfor %}
+    //ChipOutputs
+    {% for output in chipOutputs %}let {{output}} = null;
+    {% endfor %}
+
+
+    //Inputs
+    {% for input in inputs %}let {{input}} = null;
+    {% endfor %}
+    //Outputs
+    {% for output in outputs %}let {{output}} = null;
+    {% endfor %}
+    //Constants
+    {% for constant,value in constants %}let {{constant}} = {{value|json_encode()}};
+    {% endfor %}
+
+    //Custom Chips
+    {% for chip, type in customChips %}const {{chip}} = new {{type}}();
+    {% endfor %}
+
+    this.run = ({% for input in chipInputs %}{{input}}{{ loop.last ? '' : ', '}}{% endfor %}) => {
+        {% for line in code %}{{line}}
+        {% endfor %}
+        return [{% for output in chipOutputs %}{{output}}{{ loop.last ? '' : ', '}}{% endfor %}];
+    };
+};

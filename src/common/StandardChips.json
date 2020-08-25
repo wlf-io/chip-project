@@ -266,7 +266,23 @@
         "outputs": [
             "R"
         ],
-        "code": "{{output_R}} = {{constant_VAL}};",
+        "code": "{{output_R}} = {{constant_VAL|json_encode()}};",
+        "type": "value",
+        "description": "Outputs constant value"
+    },
+    "chip_const": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "constants": [
+            "NAME"
+        ],
+        "inputs": [],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = C_{{chipName}}_{{raw_constant_NAME}};",
         "type": "value",
         "description": "Outputs constant value"
     },
@@ -318,6 +334,19 @@
             "R"
         ],
         "code": "{{output_R}} = Math.min({{input_A}},{{input_B}});",
+        "type": "arithmatic",
+        "description": "sums A and B"
+    },
+    "rand": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [],
+        "outputs": [
+            "R"
+        ],
+        "code": "{{output_R}} = Math.random();",
         "type": "arithmatic",
         "description": "sums A and B"
     },

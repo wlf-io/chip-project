@@ -43,13 +43,18 @@
 			</div>
 		</div>
 		<div class="row">
-			<label>Constants</label>
+			<label>Constants</label>{% if not STANDARD %}<button class="btn btn-primary" data-action="new const">Add Const</button>{% endif %}
 			{% for key,value in chip.constants %}
 				<div class="input-group">
 					<div class="input-group-prepend">
 						<span class="input-group-text">{{key}}</span>
 					</div>
-					<input data-type="constant" data-index="{{key}}" class="form-control" type="text" value="{{ value }}">
+					<input data-type="constant" data-index="{{key}}" class="form-control" type="text" value="{{ value|json_encode()|escape }}">
+					{% if not STANDARD %}
+					<div class="input-group-append">
+						<button class="btn btn-danger" type="button" data-action="remove const" data-index="{{key}}">X</button>
+					 </div>
+					 {% endif %}
 				</div>
 			{% else %}
 				<input class="form-control" type="text" value="N/A" disabled>

@@ -1,0 +1,8 @@
+(function(){
+    {% for name,code in chipCode %}//Chip : {{name}}
+    {{ code }}
+    {% endfor %}
+    
+    return new {{chipName}}({% for const in chipConsts %}{{const|json_encode()}}{{loop.last ? '' : ', '}}{% endfor %});
+})();
+    

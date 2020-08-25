@@ -151,6 +151,13 @@ export default class Chip {
         }
     }
 
+    public addConst(constant: string) {
+        ChipType.AddConst(this.type, constant);
+    }
+
+    public removeConst(constant: string) {
+        ChipType.RemoveConst(this.type, constant);
+    }
 
     public gridPos(gridScale: number): vec2 {
         return Vec2.Multiply(this._pos, gridScale);

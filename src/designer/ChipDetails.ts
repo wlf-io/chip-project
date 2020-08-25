@@ -49,7 +49,13 @@ class ChipDetails {
                     this.chip.name = elem.value;
                     break;
                 case "constant":
-                    this.chip.setConstant(data.index ?? "", elem.value);
+                    let v: any = null;
+                    try {
+                        v = JSON.parse(elem.value);
+                    } catch (e) {
+                        v = elem.value;
+                    }
+                    this.chip.setConstant(data.index ?? "", v);
                     break;
                 case "input":
                     this.chip.setInput(parseInt(data.index ?? ""), elem.value);
@@ -114,6 +120,20 @@ class ChipDetails {
             if (event.target.dataset.toggle == "details") {
                 this.container.classList.toggle("closed");
             }
+        }
+        if (event.target instanceof HTMLButtonElement) {
+            const action = (event.target.dataset.action ?? "").toLowerCase();
+            switch (action) {
+                case "new const":
+                    this.chip?.addConst(window.prompt("New constant name") ?? "");
+                    break;
+                case "remove const":
+                    this.chip?.removeConst(event.target.dataset.index ?? "");
+                    break;
+                default:
+                    return;
+            }
+            this.render();
         }
     }
 }

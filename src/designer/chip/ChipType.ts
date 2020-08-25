@@ -137,6 +137,23 @@ export default class ChipType {
         }
     }
 
+    public static AddConst(type: string, constant: string) {
+        if (ChipType.IsStandard(type)) return;
+        type = type.toLowerCase();
+        const data = ChipType.GetData(type);
+        data.constants.push(constant);
+        ChipType.SetType(type, data);
+    }
+
+    public static RemoveConst(type: string, constant: string) {
+        if (ChipType.IsStandard(type)) return;
+        type = type.toLowerCase();
+        constant = constant.toUpperCase();
+        const data = ChipType.GetData(type);
+        data.constants = data.constants.filter(c => c != constant);
+        ChipType.SetType(type, data);
+    }
+
     public static SetSize(type: string, size: vec2) {
         if (ChipType.IsStandard(type)) return;
         type = type.toLowerCase();
@@ -196,7 +213,7 @@ export default class ChipType {
         for (let i = 0; i < data.outputs.length; i++) {
             data.outputs[i] = (data.outputs[i] || "").toUpperCase();
         }
-        data.constants = data.constants.map(c => c.toUpperCase());
+        data.constants = [...(new Set([...data.constants]))].map(c => c.toUpperCase()).filter(c => c.length);
 
         return data;
     }

@@ -54,6 +54,7 @@ class Designer {
     private renderer!: Renderer;
 
     public static get SaveString(): string { return "CHIP_DESIGNER"; }
+    public static get ChipSaveString(): string { return "CHIP_DESIGNER_CHIP"; }
 
     public static Factory(chipType: string): Designer {
         return new Designer(chipType);
@@ -64,12 +65,12 @@ class Designer {
             throw "CHIP DESIGNER ALREADY RUN";
         }
         window.ChipDesigner = this;
-        this.load();
         ChipType.BaseChip = chipType;
         ChipType.Load();
         // this.setupTwigExtensions();
         this.baseChip = new Chip(chipType, chipType);
         this.baseChip.content.setParentChip(this.baseChip);
+        this.load();
         this.selectedChipDetails = new ChipDetails();
         this.selectedChipDetails.style.top = "20px";
         this.selectedChipDetails.style.right = "20px";
@@ -126,16 +127,25 @@ class Designer {
             topLeft: { ...this._topLeft },
             debug: this._debug,
         }));
+        window.localStorage.setItem(Designer.ChipSaveString, JSON.stringify(this.baseChip));
     }
 
     private load() {
         const json = window.localStorage.getItem(Designer.SaveString);
         if (json) {
             const data = JSON.parse(json);
-
-            this.zoom = parseInt(data.zoom ?? this.zoom);
-            this._topLeft = { ...(data.topLeft ?? this._topLeft) };
-            this._debug = data.debug ?? this._debug;
+            if (data) {
+                this.zoom = parseInt(data.zoom ?? this.zoom);
+                this._topLeft = { ...(data.topLeft ?? this._topLeft) };
+                this._debug = data.debug ?? this._debug;
+            }
+        }
+        const cJson = window.localStorage.getItem(Designer.ChipSaveString);
+        if (cJson) {
+            const data = JSON.parse(cJson);
+            if (data) {
+                this.baseChip.fromJSON(data);
+            }
         }
     }
 
@@ -196,7 +206,7 @@ class Designer {
             this.selectedChip.rotate();
         }
         if (event.key == "Delete") {
-            if (this.draggingChip && this.selectedChip) {
+            if (this.selectedChip) {
                 this.draggingChip = false;
                 this.content.removeChip(this.selectedChip);
                 this._selectedChip = null;
@@ -279,12 +289,16 @@ class Designer {
         return null;
     }
 
+    public compileData() {
+        return JSON.parse(JSON.stringify({ chip: this.baseChip.toJSON(), chipData: ChipType.toJSON() }));
+    }
+
     private chipChange(chip: Chip | null) {
         this.content.updateConnectionsForChip(chip);
         this.baseChipDetails.render();
         if (this.baseChip.errors.length < 1) {
             const comp = new window.ChipCompiler();
-            comp.loadSource(JSON.stringify({ chip: this.baseChip.toJSON(), chipData: ChipType.toJSON() }));
+            comp.loadSource(JSON.stringify(this.compileData()));
             comp.run();
         }
     }
