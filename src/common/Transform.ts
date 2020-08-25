@@ -58,6 +58,14 @@ export class Line {
 
 export class Vec2 {
 
+    public static MagnitudeSquared(vec: vec2): number {
+        return (vec.x * vec.x) + (vec.y * vec.y);
+    }
+
+    public static Magnitude(vec: vec2): number {
+        return Math.sqrt(Vec2.MagnitudeSquared(vec));
+    }
+
     public static Swap(vec: vec2): vec2 {
         return {
             x: vec.y,
@@ -111,7 +119,7 @@ export class Rect {
     }
 
     public static FromPosAndPad(pos: vec2, pad: number) {
-        return Rect.Pad({ top: pos.y, bottom: pos.y, left: pos.x, right: pos.x }, pad);
+        return Rect.Pad(Rect.FromVec2(pos), pad);
     }
 
     public static FromTLAndBR(tl: vec2, br: vec2): rect {

@@ -189,8 +189,8 @@ export default class Chip {
         for (const input of this.inputs) {
             const pin = this.getInputPin(input);
             if (pin) {
-                const pinPos = this.getPinPos(pin);
-                pinPos.y -= this.isBaseChip ? 1 : 0.375;
+                const pinPos = this.getPinPosOut(pin, this.isBaseChip ? 1 : 0.375);
+                console.log(pin, pinPos);
                 const rect = Rect.Pad(Rect.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
                 if (Rect.Intersect(pRect, rect)) return pin;
             }
@@ -198,14 +198,23 @@ export default class Chip {
         for (const output of this.outputs) {
             const pin = this.getOutputPin(output);
             if (pin) {
-                const pinPos = this.getPinPos(pin);
-                pinPos.y += this.isBaseChip ? 1 : 0.375;
+                const pinPos = this.getPinPosOut(pin, this.isBaseChip ? 1 : 0.375);
                 const rect = Rect.Pad(Rect.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
                 if (Rect.Intersect(pRect, rect)) return pin;
             }
         }
 
         return null;
+    }
+
+    public clone(): Chip {
+        const chip: Chip = new Chip(`${this.type}_${Date.now()}`, this.type, this.pos);
+        chip.rotation = this.rotation;
+        Object.entries(this.constants).forEach(([name, val]) => {
+            chip.setConstant(name, val);
+        });
+        chip.name = this._name;
+        return chip;
     }
 
     public getPinPos(pin: Pin): vec2 {
@@ -242,9 +251,12 @@ export default class Chip {
         return pos;
     }
 
-    public getPinPosOutOffset(pin: Pin) {
+    public getPinPosOutOffset(pin: Pin, multiplier: number = 1) {
         const pos = { x: 0, y: 0 };
-        if (this.isBaseChip) return pos;
+        if (this.isBaseChip) {
+            pos.y = pin.output ? 1 : -1;
+            return pos;
+        }
         switch (this.rotation) {
             case 1:
                 pos.x -= pin.output ? 1 : -1;
@@ -259,11 +271,11 @@ export default class Chip {
                 pos.y += pin.output ? 1 : -1;
                 break;
         }
-        return pos;
+        return Vec2.Multiply(pos, multiplier);
     }
 
-    public getPinPosOut(pin: Pin): vec2 {
-        return Vec2.Sum(this.getPinPosOutOffset(pin), this.getPinPos(pin));
+    public getPinPosOut(pin: Pin, multiplier: number = 1): vec2 {
+        return Vec2.Sum(this.getPinPosOutOffset(pin, multiplier), this.getPinPos(pin));
     }
 
     public getOutputPin(pin: string): Pin | null {

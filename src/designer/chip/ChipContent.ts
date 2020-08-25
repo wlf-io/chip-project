@@ -77,7 +77,7 @@ export default class ChipContent {
     }
 
     public addChip(chip: Chip) {
-        if ((chip.size.x >= this._size.x || chip.size.y >= this._size.y) && !chip.isStandard) {
+        if (Vec2.Magnitude(chip.size) >= Vec2.Magnitude(this._size) && !chip.isStandard) {
             alert("Chip too large" + JSON.stringify([this._size, chip.size]));
             return false;
         }
@@ -167,54 +167,66 @@ export default class ChipContent {
     }
 
     public connect(pinA: Pin, pinB: Pin, layer: number = 0): boolean {
-        for (const con of this.connections) {
-            if ((con.usesPin(pinA) && !pinA.output) || (con.usesPin(pinB) && !pinB.output)) return false;
-        }
         const chipA = this.getChip(pinA.chip);
         const chipB = this.getChip(pinB.chip);
-
-        if (chipA && chipB) {
-            const bothAreBase = (chipA.isBaseChip && chipB.isBaseChip);
-            const oneIsBase = (chipA.isBaseChip || chipB.isBaseChip) && !bothAreBase;
-            if (oneIsBase) {
-                if (pinA.output != pinB.output) return false;
-            } else if (pinA.output == pinB.output) return false;
-
-            if (bothAreBase) {
-                if (pinA.output) {
-                    const pinS = pinA;
-                    pinA = pinB;
-                    pinB = pinS;
-                }
-            } else if (oneIsBase) {
-                if (pinA.output) {
-                    if (chipA.isBaseChip) {
-                        const pinS = pinA;
-                        pinA = pinB;
-                        pinB = pinS;
-                    }
+        if (chipA == null || chipB == null) return false;
+        for (const con of this.connections) {
+            if (con.usesPin(pinA)) {
+                if (chipA.isBaseChip) {
+                    if (pinA.output) return false;
                 } else {
-                    if (chipB.isBaseChip) {
-                        const pinS = pinA;
-                        pinA = pinB;
-                        pinB = pinS;
-                    }
+                    if (!pinA.output) return false;
                 }
-            } else if (!pinA.output) {
+            }
+            if (con.usesPin(pinB)) {
+                if (chipB.isBaseChip) {
+                    if (pinB.output) return false;
+                } else {
+                    if (!pinB.output) return false;
+                }
+            }
+        }
+
+        const bothAreBase = (chipA.isBaseChip && chipB.isBaseChip);
+        const oneIsBase = (chipA.isBaseChip || chipB.isBaseChip) && !bothAreBase;
+        if (oneIsBase) {
+            if (pinA.output != pinB.output) return false;
+        } else if (pinA.output == pinB.output) return false;
+
+        if (bothAreBase) {
+            if (pinA.output) {
                 const pinS = pinA;
                 pinA = pinB;
                 pinB = pinS;
             }
-
-            const connection = new Connection();
-            connection.layer = layer;
-            connection.source = pinA;
-            connection.target = pinB;
-            this.updatePathForConnection(connection);
-            this._connections.push(connection);
-            return true;
+        } else if (oneIsBase) {
+            if (pinA.output) {
+                if (chipA.isBaseChip) {
+                    const pinS = pinA;
+                    pinA = pinB;
+                    pinB = pinS;
+                }
+            } else {
+                if (chipB.isBaseChip) {
+                    const pinS = pinA;
+                    pinA = pinB;
+                    pinB = pinS;
+                }
+            }
+        } else if (!pinA.output) {
+            const pinS = pinA;
+            pinA = pinB;
+            pinB = pinS;
         }
-        return false;
+
+        const connection = new Connection();
+        connection.layer = layer;
+        connection.source = pinA;
+        connection.target = pinB;
+        this.updatePathForConnection(connection);
+        this._connections.push(connection);
+        return true;
+
     }
 
     public connectionAtPos(pos: vec2): Connection | null {
@@ -245,6 +257,8 @@ export default class ChipContent {
         }
         cons.forEach(con => {
             con.path.forEach(p => {
+                if (p.y >= grid.length || p.y < 0) return;
+                if (p.x >= grid[0].length || p.x < 0) return;
                 grid[p.y][p.x] = 10;
             });
         });

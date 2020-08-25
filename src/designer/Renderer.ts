@@ -7,8 +7,6 @@ class Renderer {
     private _canvas: HTMLCanvasElement;
     private context!: CanvasRenderingContext2D;
 
-    private _zoom: number = 1;
-
     private style: StyleSet = {
         colours: {
             background: "#FFF",
@@ -59,9 +57,9 @@ class Renderer {
 
     public get topLeft(): vec2 { return this.designer.topLeft; }
 
-    public get zoom(): number { return this._zoom; }
+    public get zoom(): number { return this.designer.zoom; }
 
-    public get gridScale(): number { return this.style.grid.size * this._zoom; }
+    public get gridScale(): number { return this.style.grid.size * this.zoom; }
 
     private get mouse() { return this.designer.mouse; }
 
@@ -120,7 +118,7 @@ class Renderer {
 
         this.context.textBaseline = "top";
         this.context.textAlign = "left";
-        this.fontSize = Math.round(this.style.font.size * this._zoom);
+        this.fontSize = Math.round(this.style.font.size * this.zoom);
         this.context.font = `${this.style.font.text} ${this.fontSize}px`;
 
         const gridScale = this.gridScale;
@@ -146,7 +144,7 @@ class Renderer {
             this.context.fillStyle = "#00F";
             this.context.textBaseline = "top";
             this.context.textAlign = "left";
-            this.context.fillText(this._zoom.toString(), 0, this.fontSize * 2);
+            this.context.fillText(this.zoom.toString(), 0, this.fontSize * 2);
         }
 
     }

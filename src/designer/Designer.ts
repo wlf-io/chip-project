@@ -18,7 +18,7 @@ class Designer {
     private selectedChipDetails: ChipDetails;
     // private context!: CanvasRenderingContext2D;
 
-    private zoom: number = 1;
+    private _zoom: number = 1;
 
     private _topLeft: vec2 = { x: -25, y: -25 };
 
@@ -44,6 +44,8 @@ class Designer {
     private _mousePos: vec2 = { x: 0, y: 0 };
     private _mouseGridPos: vec2 = { x: 0, y: 0 };
     private rightClickPos: vec2 = { x: 0, y: 0 };
+
+    private copyChip: Chip | null = null;
 
     private _debug: boolean = false;
 
@@ -71,10 +73,10 @@ class Designer {
         this.baseChip = new Chip(chipType, chipType);
         this.baseChip.content.setParentChip(this.baseChip);
         this.load();
-        this.selectedChipDetails = new ChipDetails();
+        this.selectedChipDetails = new ChipDetails(this);
         this.selectedChipDetails.style.top = "20px";
         this.selectedChipDetails.style.right = "20px";
-        this.baseChipDetails = new ChipDetails();
+        this.baseChipDetails = new ChipDetails(this);
         this.baseChipDetails.style.bottom = "20px";
         this.baseChipDetails.style.right = "20px";
         this.baseChipDetails.setChip(this.baseChip).show();
@@ -88,6 +90,7 @@ class Designer {
 
     public get selectedChip(): Chip | null { return this._selectedChip; }
     public get selectedChipID(): string { return this._selectedChip?.id ?? ""; }
+    public get zoom(): number { return this._zoom; }
 
     //public get mouseGridPos(): Vec2 { return this._mouseGridPos; }
 
@@ -123,7 +126,7 @@ class Designer {
 
     private save() {
         window.localStorage.setItem(Designer.SaveString, JSON.stringify({
-            zoom: this.zoom,
+            zoom: this._zoom,
             topLeft: { ...this._topLeft },
             debug: this._debug,
         }));
@@ -135,9 +138,10 @@ class Designer {
         if (json) {
             const data = JSON.parse(json);
             if (data) {
-                this.zoom = parseInt(data.zoom ?? this.zoom);
+                this._zoom = parseInt(data.zoom || this._zoom);
                 this._topLeft = { ...(data.topLeft ?? this._topLeft) };
                 this._debug = data.debug ?? this._debug;
+                this._zoom = this.clamp(this._zoom, 0.1, 4.0);
             }
         }
         const cJson = window.localStorage.getItem(Designer.ChipSaveString);
@@ -212,6 +216,12 @@ class Designer {
                 this._selectedChip = null;
             }
         }
+        if (event.key == "c" && event.ctrlKey) {
+            this.copyChip = this.selectedChip;
+        }
+        if (event.key == "v" && event.ctrlKey && this.copyChip) {
+            this.insertChipAtPos(this.copyChip.clone(), this._mouseGridPos);
+        }
         if (event.target instanceof HTMLElement && event.target.tagName.toUpperCase() == "BODY") {
             if (event.key == this.konami[this.konamiProgress]) {
                 this.konamiProgress++;
@@ -260,6 +270,7 @@ class Designer {
     private getPinAtPos(pos: vec2): Pin | null {
         const gPos = this.pos2GridScale(pos);
         if (gPos.y < -0.5 || gPos.y > (this.gridSize.y + 0.5)) {
+            console.log("BASECHIP PIN LOOKUP", gPos);
             return this.baseChip.getPinAtPos(gPos);
         } else {
             const chip = this.getChipAtPos(pos, 0.25);
@@ -293,7 +304,7 @@ class Designer {
         return JSON.parse(JSON.stringify({ chip: this.baseChip.toJSON(), chipData: ChipType.toJSON() }));
     }
 
-    private chipChange(chip: Chip | null) {
+    public chipChange(chip: Chip | null) {
         this.content.updateConnectionsForChip(chip);
         this.baseChipDetails.render();
         if (this.baseChip.errors.length < 1) {
@@ -414,7 +425,7 @@ class Designer {
     private rightClickAction(action: string[]): void {
         switch (action[0] ?? "") {
             case "add chip":
-                this.insertChipAtRightClick(action[1] ?? "+");
+                this.insertChipTypeAtRightClick(action[1] ?? "+");
                 break;
             case "remove":
                 const chip = this.getChipAtPos(this.rightClickPos);
@@ -426,7 +437,7 @@ class Designer {
             case "new custom chip":
                 const type = ChipType.New(window.prompt("New chip type name:") ?? "");
                 this.setupContextMenu();
-                if (type) this.insertChipAtRightClick(type);
+                if (type) this.insertChipTypeAtRightClick(type);
                 break;
             default:
                 console.error("Unhandler Right Click", action);
@@ -434,16 +445,24 @@ class Designer {
         }
     }
 
-    private insertChipAtRightClick(type: string) {
+    private insertChipTypeAtRightClick(type: string) {
         const chip: Chip = new Chip(`${type}_${Date.now()}`, type);
-        chip.setPos(this.snapPos2Grid(this.rightClickPos), this.gridSize);
+        this.insertChipAtRightClick(chip);
+    }
+
+    private insertChipAtRightClick(chip: Chip) {
+        this.insertChipAtPos(chip, this.rightClickPos);
+    }
+
+    private insertChipAtPos(chip: Chip, pos: vec2) {
+        chip.setPos(this.snapPos2Grid(pos), this.gridSize);
         this.content.addChip(chip);
         this.chipChange(chip);
     }
 
     private mouseWheel(e: WheelEvent) {
-        this.zoom -= e.deltaY * 0.1;
-        this.zoom = this.clamp(this.zoom, 0.1, 4.0);
+        this._zoom -= e.deltaY * 0.1;
+        this._zoom = this.clamp(this._zoom, 0.1, 4.0);
     }
 
     public get chipEdge(): number { return 0.28; }

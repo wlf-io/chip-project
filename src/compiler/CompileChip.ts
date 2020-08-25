@@ -29,8 +29,6 @@ export default class CompileChip {
         const chips = all[type].content.chips;
         const cons = all[type].content.connections;
 
-        console.log(cons);
-
         this.innerChips = chips.filter(chip => {
             for (const con of cons) {
                 if (con.source.chip == chip.id || con.target.chip == chip.id) return true;
@@ -71,7 +69,6 @@ export default class CompileChip {
         }
 
         this.chipOrder = Object.entries(chipOrderScores).sort((a, b) => a[1] - b[1]).map(s => s[0]);
-        console.log(chipOrderScores, this.chipOrder);
     }
 
     private generateRunCode(): string[] {

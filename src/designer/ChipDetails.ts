@@ -2,6 +2,7 @@ import Chip from "./chip/Chip";
 import ChipType from "./chip/ChipType";
 import detailsTemplate from "./views/chipDetails.twig";
 import { twig, Template } from "twig";
+import Designer from "./Designer";
 
 
 class ChipDetails {
@@ -11,6 +12,8 @@ class ChipDetails {
 
     private template: Template;
 
+    private designer: Designer;
+
     /*
     <div id="chipDetailsContainer" class="card">
         <div id="chipDetailsTitle" class="card-header">
@@ -19,11 +22,12 @@ class ChipDetails {
         <div id="chipDetailsContent" class="card-body"></div>
     </div>
     */
-    public static Factory() {
-        return new ChipDetails();
+    public static Factory(designer: Designer) {
+        return new ChipDetails(designer);
     }
 
-    constructor() {
+    constructor(designer: Designer) {
+        this.designer = designer;
         this.template = twig({ data: detailsTemplate });
         this.setupHtml();
         this.hide();
@@ -76,6 +80,7 @@ class ChipDetails {
                     break;
             }
         }
+        this.designer.chipChange(this.chip);
         window.setTimeout(() => this.render(), 10);
         //console.log(JSON.parse(JSON.stringify(this.chip)));
     }
