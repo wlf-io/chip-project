@@ -11,6 +11,10 @@ function ready(fn: Function) {
 
 
 ready(() => {
-    Designer.Factory("BaseChip")
-        .run();
+    if (window.opener && window.opener !== window) {
+        document.body.textContent = "POPUP";
+    } else {
+        Designer.Factory({ chipType: "BaseChip" })
+            .run();
+    }
 });

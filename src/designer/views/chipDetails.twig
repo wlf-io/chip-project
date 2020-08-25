@@ -1,7 +1,11 @@
 {% set STANDARD = chip.isStandard %}
 <div class="card-header chipDetailsTitle">
 	<h4>{{chip.type}}
-		({{chip.id}})<span data-toggle="details" class="badge badge-secondary"></span>
+		({{chip.id}})
+		<span data-toggle="details" class="badge badge-secondary"> </span>
+		{% if not STANDARD and not chip.isBaseChip %}
+		<span data-action="editChip" class="badge badge-secondary">Edit</span>
+		{% endif %}
 	</h4>
 </div>
 <div class="card-body chipDetailsContent">
@@ -28,22 +32,7 @@
 														</div-->
 		{% endif %}
 		<div class="row">
-			<label>Size</label>
-			<div class="input-group">
-				<div class="input-group-prepend">
-					<span class="input-group-text">X</span>
-				</div>
-				<input data-type="size" data-index="x" class="form-control" type="number" value="{{ chip.size.x }}" {{STANDARD ? 'disabled' : ''}}>
-			</div>
-			<div class="input-group">
-				<div class="input-group-prepend">
-					<span class="input-group-text">Y</span>
-				</div>
-				<input data-type="size" data-index="y" class="form-control" type="number" value="{{ chip.size.y }}" {{STANDARD ? 'disabled' : ''}}>
-			</div>
-		</div>
-		<div class="row">
-			<label>Constants</label>{% if not STANDARD %}<button class="btn btn-primary" data-action="new const">Add Const</button>{% endif %}
+			<label>Constants</label>
 			{% for key,value in chip.constants %}
 				<div class="input-group">
 					<div class="input-group-prepend">
@@ -59,7 +48,26 @@
 			{% else %}
 				<input class="form-control" type="text" value="N/A" disabled>
 			{% endfor %}
+			{% if not STANDARD %}<button class="btn btn-primary" data-action="new const">Add Const</button>{% endif %}
 		</div>
+		{% if chip.isBaseChip %}
+		<hr>
+		<div class="row">
+			<label>Size</label>
+			<div class="input-group">
+				<div class="input-group-prepend">
+					<span class="input-group-text">X</span>
+				</div>
+				<input data-type="size" data-index="x" class="form-control" type="number" value="{{ chip.size.x }}" {{STANDARD ? 'disabled' : ''}}>
+			</div>
+			<div class="input-group">
+				<div class="input-group-prepend">
+					<span class="input-group-text">Y</span>
+				</div>
+				<input data-type="size" data-index="y" class="form-control" type="number" value="{{ chip.size.y }}" {{STANDARD ? 'disabled' : ''}}>
+			</div>
+		</div>
+		<hr>
 		<div class="row">
 			<label>Inputs</label>
 			{% for input in chip.inputs %}
@@ -68,6 +76,7 @@
 				</div>
 			{% endfor %}
 		</div>
+		<hr>
 		<div class="row">
 			<label>Outputs</label>
 			{% for output in chip.outputs %}
@@ -76,6 +85,7 @@
 				</div>
 			{% endfor %}
 		</div>
+		<hr>
 		<div class="row">
 			<ul style="color:#F00;">
 				{% for error in chip.errors %}
@@ -83,6 +93,7 @@
 				{% endfor %}
 			</ul>
 		</div>
+		{% endif %}
 		<!--pre>{{dump()}}</pre-->
 	</form>
 </div>

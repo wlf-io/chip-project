@@ -24,12 +24,13 @@ canvas.designer {
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
+    margin-left: 5px;
 }
-.chipDetailsTitle span:before {
+.chipDetailsTitle span[data-toggle]:before {
     content: "-";
 }
 
-.chipDetailsContainer.closed .chipDetailsTitle span:before {
+.chipDetailsContainer.closed .chipDetailsTitle span[data-toggle]:before {
     content: "+";
 }
 

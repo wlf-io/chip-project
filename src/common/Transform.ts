@@ -58,6 +58,10 @@ export class Line {
 
 export class Vec2 {
 
+    public static Area(vec: vec2): number {
+        return vec.x * vec.y;
+    }
+
     public static MagnitudeSquared(vec: vec2): number {
         return (vec.x * vec.x) + (vec.y * vec.y);
     }

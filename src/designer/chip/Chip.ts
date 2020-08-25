@@ -190,7 +190,6 @@ export default class Chip {
             const pin = this.getInputPin(input);
             if (pin) {
                 const pinPos = this.getPinPosOut(pin, this.isBaseChip ? 1 : 0.375);
-                console.log(pin, pinPos);
                 const rect = Rect.Pad(Rect.FromVec2(pinPos), this.isBaseChip ? 0.25 : 0.1);
                 if (Rect.Intersect(pRect, rect)) return pin;
             }

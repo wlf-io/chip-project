@@ -82,7 +82,6 @@ class ChipDetails {
         }
         this.designer.chipChange(this.chip);
         window.setTimeout(() => this.render(), 10);
-        //console.log(JSON.parse(JSON.stringify(this.chip)));
     }
 
     public hide(): ChipDetails {
@@ -126,14 +125,18 @@ class ChipDetails {
                 this.container.classList.toggle("closed");
             }
         }
-        if (event.target instanceof HTMLButtonElement) {
+        if (event.target instanceof HTMLButtonElement || event.target instanceof HTMLSpanElement) {
             const action = (event.target.dataset.action ?? "").toLowerCase();
+            console.log(action);
             switch (action) {
                 case "new const":
                     this.chip?.addConst(window.prompt("New constant name") ?? "");
                     break;
                 case "remove const":
                     this.chip?.removeConst(event.target.dataset.index ?? "");
+                    break;
+                case "editchip":
+                    if (this.chip) this.designer.editChip(this.chip);
                     break;
                 default:
                     return;

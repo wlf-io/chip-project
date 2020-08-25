@@ -46,7 +46,6 @@ class Compiler {
     }
 
     run() {
-        //console.log(this.source);
         const _chipCode: { [k: string]: string } = {};
         const _neededChips: string[] = [];
         Object.keys(this.source.chipData).forEach(type => {

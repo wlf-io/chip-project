@@ -35,7 +35,7 @@ export default class ChipContent {
     public get chipErrors(): string[] {
         return [
             ...this.chips.filter(chip => {
-                return (chip.size.x >= this._size.x || chip.size.y >= this._size.y) && !chip.isStandard;
+                return (Vec2.Area(chip.size) >= Vec2.Area(this._size)) && !chip.isStandard;
             }).map(chip => `Chip Too Large ${chip.id}`)
         ]
     }
@@ -100,6 +100,7 @@ export default class ChipContent {
         connections.forEach(con => con.clearPath());
         connections.sort((a, b) => a.distance(this) - b.distance(this));
         connections.forEach(con => this.updatePathForConnection(con));
+        ChipType.Save();
     }
 
     private updatePathForConnection(con: Connection) {
@@ -294,7 +295,7 @@ export default class ChipContent {
                     if (grid.length > pinPos.y && pinPos.y >= 0) {
                         const line = grid[pinPos.y];
                         if (typeof line == "undefined") {
-                            console.log(chip.id, grid, pinPos);
+                            console.error(chip.id, grid, pinPos);
                             break;
                         }
                         if (line.length > pinPos.x && pinPos.x >= 0 && line[pinPos.x] < 10) {

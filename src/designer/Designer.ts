@@ -11,6 +11,13 @@ declare global {
     interface Window { ChipDesigner: Designer; }
 }
 
+interface IDesignerConstructor {
+    chipType: string;
+    render?: boolean;
+    parentChipType?: string;
+    chipID?: string;
+}
+
 class Designer {
 
     // private canvas!: HTMLCanvasElement;
@@ -58,21 +65,28 @@ class Designer {
     public static get SaveString(): string { return "CHIP_DESIGNER"; }
     public static get ChipSaveString(): string { return "CHIP_DESIGNER_CHIP"; }
 
-    public static Factory(chipType: string): Designer {
-        return new Designer(chipType);
+    public static Factory(params: IDesignerConstructor): Designer {
+        return new Designer(params);
     }
 
-    constructor(chipType: string) {
+    constructor(params: IDesignerConstructor) {
         if (window.ChipDesigner) {
             throw "CHIP DESIGNER ALREADY RUN";
         }
         window.ChipDesigner = this;
-        ChipType.BaseChip = chipType;
+        ChipType.BaseChip = params.chipType;
         ChipType.Load();
         // this.setupTwigExtensions();
-        this.baseChip = new Chip(chipType, chipType);
+        const loadChip: boolean = (params.parentChipType ?? "").length < 1;
+        const chip = new Chip(params.chipID ?? params.chipType, params.chipType);
+        if (loadChip) {
+            this.baseChip = chip;
+        } else {
+            const data = ChipType.GetData(params.parentChipType ?? "");
+            this.baseChip = data.content.getChip(params.chipID ?? "") ?? chip;
+        }
+        this.load(loadChip);
         this.baseChip.content.setParentChip(this.baseChip);
-        this.load();
         this.selectedChipDetails = new ChipDetails(this);
         this.selectedChipDetails.style.top = "20px";
         this.selectedChipDetails.style.right = "20px";
@@ -81,10 +95,15 @@ class Designer {
         this.baseChipDetails.style.right = "20px";
         this.baseChipDetails.setChip(this.baseChip).show();
         this.setupContextMenu();
-        this.setupRenderer();
+        if (params.render ?? true) this.setupRenderer();
         window.addEventListener("beforeunload", () => this.save());
 
         this.chipChange(null);
+    }
+
+    public editChip(chip: Chip) {
+        console.log("EDIT CHIP");
+        window.open("/", chip.type, "menubar=no,status=no,location=no,toolbar=no,width=1000,height=900");
     }
 
 
@@ -133,7 +152,7 @@ class Designer {
         window.localStorage.setItem(Designer.ChipSaveString, JSON.stringify(this.baseChip));
     }
 
-    private load() {
+    private load(loadChip: boolean) {
         const json = window.localStorage.getItem(Designer.SaveString);
         if (json) {
             const data = JSON.parse(json);
@@ -144,6 +163,7 @@ class Designer {
                 this._zoom = this.clamp(this._zoom, 0.1, 4.0);
             }
         }
+        if (!loadChip) return;
         const cJson = window.localStorage.getItem(Designer.ChipSaveString);
         if (cJson) {
             const data = JSON.parse(cJson);
@@ -270,7 +290,6 @@ class Designer {
     private getPinAtPos(pos: vec2): Pin | null {
         const gPos = this.pos2GridScale(pos);
         if (gPos.y < -0.5 || gPos.y > (this.gridSize.y + 0.5)) {
-            console.log("BASECHIP PIN LOOKUP", gPos);
             return this.baseChip.getPinAtPos(gPos);
         } else {
             const chip = this.getChipAtPos(pos, 0.25);
