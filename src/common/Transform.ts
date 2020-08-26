@@ -58,6 +58,9 @@ export class Line {
 
 export class Vec2 {
 
+    public static get Zero(): vec2 { return { x: 0, y: 0 }; }
+    public static get One(): vec2 { return { x: 1, y: 1 }; }
+
     public static Area(vec: vec2): number {
         return vec.x * vec.y;
     }

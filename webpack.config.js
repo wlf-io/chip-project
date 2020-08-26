@@ -1,5 +1,12 @@
 const CopyPlugin = require('copy-webpack-plugin');
 const path = require('path');
+let local = { devServer: {}, plugins: [] };
+try {
+    local = require("./local.webpack");
+} catch (e) {
+
+}
+
 
 let environment = "development";
 //let environment = "production";
@@ -35,11 +42,12 @@ module.exports = [
             ],
         },
         plugins: [
-            new CopyPlugin({
-                patterns: [
-                    { context: 'src/designer/public', from: './**/*', to: "." },
-                ]
-            }),
+            ...(local.plugins || []),
+            // new CopyPlugin({
+            //     patterns: [
+            //         { context: 'src/designer/public', from: './**/*', to: "." },
+            //     ]
+            // }),
             // new MiniCssExtractPlugin(),
             // new HtmlWebpackPlugin({
             //     excludeChunks: ["sw"],
@@ -55,10 +63,8 @@ module.exports = [
             extensions: ['.tsx', '.ts', '.js'],
         },
         devServer: {
+            ...local.devServer,
             contentBase: path.join(__dirname, 'build'),
-            compress: true,
-            port: 9000,
-            writeToDisk: true,
         }
     },
 ]

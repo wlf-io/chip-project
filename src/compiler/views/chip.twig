@@ -1,5 +1,4 @@
 function {{chipName}}({% for const in chipConstants %}_{{const}}{{ loop.last ? '' : ', '}}{% endfor %}){
-
     //ChipConstants
     {% for const in chipConstants %}let {{const}} = _{{const}};
     {% endfor %}
@@ -9,22 +8,75 @@ function {{chipName}}({% for const in chipConstants %}_{{const}}{{ loop.last ? '
 
 
     //Inputs
-    {% for input in inputs %}let {{input}} = null;
+    {% for input in inputVars %}let {{input}} = null;
     {% endfor %}
     //Outputs
-    {% for output in outputs %}let {{output}} = null;
+    {% for output in outputVars %}let {{output}} = null;
     {% endfor %}
     //Constants
-    {% for constant,value in constants %}let {{constant}} = {{value|json_encode()}};
+    {% for constant,value in constantVars %}let {{constant}} = {{value|json_encode()}};
     {% endfor %}
 
     //Custom Chips
-    {% for chip, type in customChips %}const {{chip}} = new {{type}}();
+    {% for customChip in customChips %}const {{customChip.varName}} = new {{customChip.chipName}}({{customChip.constants|join(", ")}});
     {% endfor %}
 
     this.run = ({% for input in chipInputs %}{{input}}{{ loop.last ? '' : ', '}}{% endfor %}) => {
-        {% for line in code %}{{line}}
+        {% if debug %}{% endif %}
+        {% for chipCode in chipCodes %}
+        // Chip : {{chipCode.id}} : {{ chipCode.type }}
+        {% if debug %}try{ {% endif %}
+        {% for line in chipCode.code %}{{line}}
+        {% endfor %} 
+        {% if debug %} }catch(e){
+            if({{chipName}}.isBase){
+                throw {"{{chipCode.id}}":e,data:this.getDebugData()};
+            } else {
+                throw {"{{chipCode.id}}":e,standard:{{chipCode.isStandard|json_encode}}};
+            }
+        }{% endif %}
         {% endfor %}
+
         return [{% for output in chipOutputs %}{{output}}{{ loop.last ? '' : ', '}}{% endfor %}];
     };
+
+    this.getState = () => {
+        return {
+            constants: { {{chipConstants|join(", ")}} },
+            outputs: { {{chipOutputs|join(", ")}} },
+            {% if customChips is not empty %}
+            customChips:{
+            {% for customChip in customChips %}
+            "{{customChip.id}}": {{customChip.varName}}.getState(),
+            {% endfor %}
+            },
+            {% endif %}
+        };
+    };
+
+    {% if debug %}
+    this.getDebugData = () => {
+        return {
+            {% if customChips is not empty %}
+            customChips:{
+            {% for customChip in customChips %}
+            "{{customChip.id}}": {{customChip.varName}}.getDebugData(),
+            {% endfor %}
+            },
+            {% endif %}
+            rawMem: {
+                chip:this.getState(),
+                inputsVars: { {{inputVars|join(", ")}} },
+                outputVars: { {{outputVars|join(", ")}} },
+                constantVars: { {% for constant,value in constantVars %}{{constant}}{{loop.last ? "" : ", "}}{% endfor %} },
+            },
+        };
+    };
+    {% endif %}
+
 };
+
+{{chipName}}.isBase = false;
+{{chipName}}.Constants = {{chipConstantsRaw|json_encode}};
+{{chipName}}.Outputs = {{chipOutputsRaw|json_encode}};
+{{chipName}}.Inputs = {{chipInputsRaw|json_encode}};

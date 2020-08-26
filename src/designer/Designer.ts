@@ -1,5 +1,5 @@
-import { Chip, ChipContent, ChipType, Connection, Pin } from "./chip";
-import { vec2 } from "../common/Transform";
+import { Chip, ChipType, Connection, Pin } from "./chip";
+import { Vec2, vec2 } from "../common/Transform";
 import ChipDetails from "./ChipDetails";
 import RightClickMenu from "./RightClickMenu";
 import RightClickData from "./data/RightClick.json";
@@ -14,8 +14,7 @@ declare global {
 interface IDesignerConstructor {
     chipType: string;
     render?: boolean;
-    parentChipType?: string;
-    chipID?: string;
+    maxSize?: vec2;
 }
 
 class Designer {
@@ -39,6 +38,7 @@ class Designer {
     //private lastTime: number = 0;
 
     private _selectedChip: Chip | null = null;
+    private _selectedChipRotation: number = 0;
     private draggingChip: boolean = false;
     private draggingChipOffset: vec2 = { x: 0, y: 0 };
 
@@ -62,8 +62,12 @@ class Designer {
 
     private renderer!: Renderer;
 
+    private isPopup: boolean;
+
     public static get SaveString(): string { return "CHIP_DESIGNER"; }
     public static get ChipSaveString(): string { return "CHIP_DESIGNER_CHIP"; }
+
+    public childWindows: { [k: string]: Window } = {};
 
     public static Factory(params: IDesignerConstructor): Designer {
         return new Designer(params);
@@ -73,20 +77,14 @@ class Designer {
         if (window.ChipDesigner) {
             throw "CHIP DESIGNER ALREADY RUN";
         }
+        this.isPopup = (window.opener && window.opener != window);
         window.ChipDesigner = this;
+        ChipType.BaseChipMaxSize = { ...(params.maxSize ?? ChipType.BaseChipMaxSize) };
         ChipType.BaseChip = params.chipType;
-        ChipType.Load();
         // this.setupTwigExtensions();
-        const loadChip: boolean = (params.parentChipType ?? "").length < 1;
-        const chip = new Chip(params.chipID ?? params.chipType, params.chipType);
-        if (loadChip) {
-            this.baseChip = chip;
-        } else {
-            const data = ChipType.GetData(params.parentChipType ?? "");
-            this.baseChip = data.content.getChip(params.chipID ?? "") ?? chip;
-        }
-        this.load(loadChip);
-        this.baseChip.content.setParentChip(this.baseChip);
+        //const loadChip: boolean = (params.parentChipType ?? "").length < 1;
+        this.baseChip = new Chip(params.chipType, params.chipType);
+        this.load();
         this.selectedChipDetails = new ChipDetails(this);
         this.selectedChipDetails.style.top = "20px";
         this.selectedChipDetails.style.right = "20px";
@@ -96,16 +94,68 @@ class Designer {
         this.baseChipDetails.setChip(this.baseChip).show();
         this.setupContextMenu();
         if (params.render ?? true) this.setupRenderer();
-        window.addEventListener("beforeunload", () => this.save());
+        window.addEventListener("beforeunload", () => this.close());
 
-        this.chipChange(null);
+        this.chipChange();
+
+        this.run();
     }
 
-    public editChip(chip: Chip) {
-        console.log("EDIT CHIP");
-        window.open("/", chip.type, "menubar=no,status=no,location=no,toolbar=no,width=1000,height=900");
+    private close() {
+        this.save();
+        if (!this.isPopup) {
+            Object.values(this.childWindows).forEach(child => child.close());
+        }
     }
 
+    private getChildWindowForMessage(msg: MessageEvent): [string, Window] | [] {
+        const windows = Object.entries(this.childWindows).filter(w => w[1] == msg.source);
+        return windows.length == 1 ? windows[0] : [];
+    }
+
+    private getChildWindowForChipType(type: string): Window | null {
+        if (this.childWindows.hasOwnProperty(type)) {
+            const child = this.childWindows[type];
+            if (!child.closed) return child;
+            delete this.childWindows[type];
+        }
+        return null;
+    }
+
+    public message(msg: MessageEvent) {
+        const [childChipType, childWindow] = this.getChildWindowForMessage(msg);
+        if (childChipType && childWindow && typeof msg.data == "object") {
+            switch ((msg.data["action"] ?? "").toLowerCase()) {
+                case "ready":
+                    console.log("GIVE CHIP DATA");
+                    const data: IDesignerConstructor = {
+                        chipType: childChipType
+                    };
+                    childWindow.postMessage({ action: "start", data }, "*");
+                    break;
+                default:
+                    console.log("Unknown Message", msg);
+                    break;
+            }
+        }
+    }
+
+    public editChip(chipType: string) {
+        if (this.isPopup) {
+            window.opener.postMessage({ action: "edit chip", data: chipType });
+        } else {
+            const child = this.getChildWindowForChipType(chipType);
+            if (child) {
+                alert("ALREADY OPEN");
+            } else {
+                const child = window.open("/", chipType, "menubar=no,status=no,location=no,toolbar=no,width=1000,height=900");
+                if (child) {
+                    this.childWindows[chipType] = child;
+                    window.setTimeout(() => child?.postMessage("BOB", "*"), 1000);
+                }
+            }
+        }
+    }
 
     public get selectedChip(): Chip | null { return this._selectedChip; }
     public get selectedChipID(): string { return this._selectedChip?.id ?? ""; }
@@ -139,11 +189,8 @@ class Designer {
         return this.mouseState;
     }
 
-    private get content(): ChipContent {
-        return this.baseChip.content;
-    }
-
     private save() {
+        if (this.isPopup) return;
         window.localStorage.setItem(Designer.SaveString, JSON.stringify({
             zoom: this._zoom,
             topLeft: { ...this._topLeft },
@@ -152,7 +199,7 @@ class Designer {
         window.localStorage.setItem(Designer.ChipSaveString, JSON.stringify(this.baseChip));
     }
 
-    private load(loadChip: boolean) {
+    private load() {
         const json = window.localStorage.getItem(Designer.SaveString);
         if (json) {
             const data = JSON.parse(json);
@@ -163,7 +210,7 @@ class Designer {
                 this._zoom = this.clamp(this._zoom, 0.1, 4.0);
             }
         }
-        if (!loadChip) return;
+        if (this.isPopup) return;
         const cJson = window.localStorage.getItem(Designer.ChipSaveString);
         if (cJson) {
             const data = JSON.parse(cJson);
@@ -195,11 +242,11 @@ class Designer {
         this.rightClick = new RightClickMenu(document.body, action => this.rightClickAction(action), "root", RightClickData);
     }
 
-    public get gridSize(): vec2 { return this.baseChip.content.size; }
+    public get gridSize(): vec2 { return this.baseChip.innerSize; }
 
     public setChipSize(gridSize: vec2): Designer {
         this.baseChip.setSize(gridSize);
-        this.content.chips.forEach(chip => chip.clamp2Grid(this.gridSize));
+        this.baseChip.chips.forEach(chip => chip.clamp2Grid(this.gridSize));
         this.baseChipDetails.setChip(this.baseChip);
         return this;
     }
@@ -232,7 +279,7 @@ class Designer {
         if (event.key == "Delete") {
             if (this.selectedChip) {
                 this.draggingChip = false;
-                this.content.removeChip(this.selectedChip);
+                this.baseChip.removeChip(this.selectedChip);
                 this._selectedChip = null;
             }
         }
@@ -284,7 +331,7 @@ class Designer {
 
     private getConnectionAtPos(pos: vec2): Connection | null {
         const gPos = this.pos2GridScale(pos);
-        return this.content.connectionAtPos(gPos);
+        return this.baseChip.connectionAtPos(gPos);
     }
 
     private getPinAtPos(pos: vec2): Pin | null {
@@ -303,7 +350,7 @@ class Designer {
     private getChipAtPos(pos: vec2, pad: number | null = null): Chip | null {
         pad ??= this.chipEdge * 0.5;
         const gPos = this.pos2GridScale(pos);
-        const chips = this.content.chips;
+        const chips = this.baseChip.chips;
         for (const chip of chips) {
             if (chip.intersects({ top: gPos.y, left: gPos.x, bottom: gPos.y, right: gPos.x }, pad)) {
                 return chip;
@@ -323,11 +370,12 @@ class Designer {
         return JSON.parse(JSON.stringify({ chip: this.baseChip.toJSON(), chipData: ChipType.toJSON() }));
     }
 
-    public chipChange(chip: Chip | null) {
-        this.content.updateConnectionsForChip(chip);
+    public chipChange() {
+        this.baseChip.updateConnections();
         this.baseChipDetails.render();
+        this.selectedChipDetails.render();
         if (this.baseChip.errors.length < 1) {
-            const comp = new window.ChipCompiler();
+            const comp = new window.ChipCompiler({ debug: true });
             comp.loadSource(JSON.stringify(this.compileData()));
             comp.run();
         }
@@ -351,6 +399,7 @@ class Designer {
                 this.draggingChipOffset.x = chipPos.x - this._mouseGridPos.x;
                 this.draggingChipOffset.y = chipPos.y - this._mouseGridPos.y;
                 this._selectedChip = chip;
+                this._selectedChipRotation = chip.rotation;
                 this.draggingChip = true;
                 this.selectedChipDetails.setChip(chip);
             } else {
@@ -396,23 +445,25 @@ class Designer {
                     pos.x -= size.x * 0.5;
                     pos.y -= size.y * 0.5;
                     const gridPos = this.snapPos2Grid(pos);
-                    sChip.setPos(gridPos, this.gridSize);
-                    for (const oChip of this.content.chips) {
-                        if (oChip.id == sChip.id) continue;
-                        if (oChip.intersectsChip(sChip)) {
-                            sChip.setPos(orgPos, this.gridSize);
-                            break;
+                    if (!Vec2.Equal(gridPos, sChip.pos) || this._selectedChipRotation != sChip.rotation) {
+                        sChip.setPos(gridPos, this.gridSize);
+                        for (const oChip of this.baseChip.chips) {
+                            if (oChip.id == sChip.id) continue;
+                            if (oChip.intersectsChip(sChip)) {
+                                sChip.setPos(orgPos, this.gridSize);
+                                break;
+                            }
                         }
+                        this.chipChange();
                     }
-                    this.chipChange(sChip);
                 }
             } else if (this._draggingPin) {
                 const pin = this.getPinAtPos(this._mouseGridPos);
                 if (this._connectingPin && pin) {
                     if (pin.isEqualTo(this._connectingPin)) {
-                        this.content.disconnect(pin);
-                    } else this.content.connect(this._connectingPin, pin);
-                    this.chipChange(null);
+                        this.baseChip.disconnect(pin);
+                    } else this.baseChip.connect(this._connectingPin, pin);
+                    this.chipChange();
                 }
             }
         }
@@ -449,8 +500,8 @@ class Designer {
             case "remove":
                 const chip = this.getChipAtPos(this.rightClickPos);
                 if (chip) {
-                    this.content.removeChip(chip);
-                    this.chipChange(chip);
+                    this.baseChip.removeChip(chip);
+                    this.chipChange();
                 }
                 break;
             case "new custom chip":
@@ -475,8 +526,8 @@ class Designer {
 
     private insertChipAtPos(chip: Chip, pos: vec2) {
         chip.setPos(this.snapPos2Grid(pos), this.gridSize);
-        this.content.addChip(chip);
-        this.chipChange(chip);
+        this.baseChip.addChip(chip);
+        this.chipChange();
     }
 
     private mouseWheel(e: WheelEvent) {
@@ -491,19 +542,20 @@ class Designer {
         if (this.running) return this;
         this.running = true;
         this.update(0);
+        console.log("BOB");
         return this;
     }
 
-    public stop(): Designer {
-        this.running = false;
-        return this;
-    }
+    // public stop(): Designer {
+    //     this.running = false;
+    //     return this;
+    // }
 
     private update(time: number): void {
         const delta = time - this._time.last;
         this._time.total = time;
         this._time.delta = delta;
-        this.renderer.draw(delta, this.baseChip, this.content);
+        this.renderer.draw(delta, this.baseChip);
         this._time.last = time;
         if (this.running) {
             window.requestAnimationFrame(time => this.update(time));

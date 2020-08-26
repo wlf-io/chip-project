@@ -2,8 +2,6 @@ import { ChipTypeData as BaseChipTypeData } from "../../common/interfaces/source
 import { Vec2, vec2 } from "../../common/Transform";
 import ChipContent from "./ChipContent";
 import standardChips from "../../common/StandardChips.json";
-
-//window.addEventListener("beforeunload", () => ChipType.Save());
 window.addEventListener("storage", e => ChipType.StorageChange(e));
 
 export default class ChipType {
@@ -17,25 +15,22 @@ export default class ChipType {
 
     public static get ChipScaleFactor(): number { return ChipType._ChipScaleFactor; }
 
-    public static get SaveString(): string { return "CHIP_DESIGNER_TPYES"; }
+    public static get SaveString(): string { return "CHIP_DESIGNER_TPYES_"; }
 
     public static get BaseChip(): string { return ChipType._BaseChip; }
     public static set BaseChip(name: string) { ChipType._BaseChip = name.toLowerCase(); }
 
-    private static lasthash: number = 0;
+    public static BaseChipMaxSize: vec2 = { x: 1000, y: 1000 };
 
     public static get maxSize(): vec2 {
-        const size = { ...ChipType.GetData(ChipType.BaseChip).size };
-        //size.x -= 1;
-        //size.y -= 1;
-        return size;
+        return { ...ChipType.GetData(ChipType.BaseChip).size };
     }
 
     private static SetType(type: string, data: ChipTypeData, save: boolean = true) {
         type = type.toLowerCase();
         data = ChipType.Sanitize(data, type);
         ChipType.types[type] = data;
-        if (save) ChipType.Save();
+        if (save) ChipType.SaveType(type);
         return data;
     }
 
@@ -96,21 +91,23 @@ export default class ChipType {
         ChipType.init = true;
     }
 
-    private static LoadChip(name: string, chipData: { [k: string]: any }) {
+    private static LoadChip(name: string, stored: { [k: string]: any }) {
         name = name.toLowerCase();
         const def = ChipType.Default();
-        const size = { ...(chipData.size ?? def.size) };
+        const size = { ...(stored.size ?? def.size) };
         const data: ChipTypeData = {
             size: size,
-            inputs: [...(chipData.inputs ?? def.inputs)],
-            outputs: [...(chipData.outputs ?? def.outputs)],
-            type: chipData.type ?? def.type,
-            constants: [...(chipData.constants ?? def.constants)],
-            content: ChipContent.Factory({ ...size }).fromJSON(chipData.content ?? {}),
-            description: chipData.description ?? def.description,
+            inputs: [...(stored.inputs ?? def.inputs)],
+            outputs: [...(stored.outputs ?? def.outputs)],
+            type: stored.type ?? def.type,
+            constants: [...(stored.constants ?? def.constants)],
+            content: ChipContent.Factory({ ...size }).fromJSON(stored.content ?? {}),
+            description: stored.description ?? def.description,
             code: null,
         };
-        ChipType.SetType(name, data);
+        console.log(stored, JSON.parse(JSON.stringify(data)));
+        ChipType.SetType(name, data, false);
+        return ChipType.GetData(name);
     }
 
     public static GetData(type: string): ChipTypeData {
@@ -118,7 +115,7 @@ export default class ChipType {
         let result: ChipTypeData;
         //@ts-ignore
         if (ChipType.Standard().hasOwnProperty(type)) result = ChipType.Standard()[type];
-        else result = ChipType.types[type] ?? ChipType.Default();
+        else result = ChipType.types[type] ?? ChipType.LoadType(type);
         if (result != null) result = { ...result };
         return result;
     }
@@ -162,14 +159,14 @@ export default class ChipType {
         type = type.toLowerCase();
         const data = ChipType.GetData(type);
         data.size = { ...size };
-        if (type !== ChipType.BaseChip) {
+        if (type != ChipType.BaseChip) {
             const maxArea = Vec2.Area(ChipType.maxSize);
             while (Vec2.Area(data.size) >= maxArea) {
                 if (data.size.y > 1) data.size.y -= 1;
                 else data.size.x -= 1;
             }
         }
-        data.size = Vec2.Clamp(data.size, 1, 1000);
+        data.size = Vec2.ClampVec(data.size, Vec2.One, ChipType.BaseChipMaxSize);
         ChipType.SetType(type, data)
             .content.setSize({ ...data.size });
     }
@@ -197,37 +194,51 @@ export default class ChipType {
     }
 
     public static StorageChange(e: StorageEvent) {
-        console.log("STORAGE", this.lasthash, ChipType.hashText(e.newValue ?? ""), e);
-    }
-
-    private static hashText(text: string): number {
-        let hash = 0;
-        let chr = 0;
-        for (let i = 0; i < text.length; i++) {
-            chr = text.charCodeAt(i);
-            hash = ((hash << 5) - hash) + chr;
-            hash |= 0;
+        console.log(e.key, e.newValue);
+        if (e.key) {
+            if (e.key.startsWith(ChipType.SaveString)) {
+                ChipType.LoadType(e.key.substr(ChipType.SaveString.length).toLowerCase());
+            }
         }
-        return hash;
+        // if (hash != this.lasthash) {
+        //     ChipType.Load();
+        // }
     }
 
-    public static Save() {
-        const text = JSON.stringify(ChipType);
-        window.localStorage.setItem(ChipType.SaveString, text);
-        this.lasthash = ChipType.hashText(text);
-    }
+    // private static hashText(text: string): number {
+    //     let hash = 0;
+    //     let chr = 0;
+    //     for (let i = 0; i < text.length; i++) {
+    //         chr = text.charCodeAt(i);
+    //         hash = ((hash << 5) - hash) + chr;
+    //         hash |= 0;
+    //     }
+    //     return hash;
+    // }
 
-    public static Load() {
-        const json = window.localStorage.getItem(ChipType.SaveString);
-        if (json) {
-            const data: { [k: string]: any } = JSON.parse(json);
-            Object.entries(data).forEach((entry: [string, { [k: string]: any }]) => {
-                this.LoadChip(entry[0], entry[1]);
-            });
-            const loaded = JSON.stringify(ChipType);
-            console.assert(loaded === json, "LOAD FAILED", { stored: JSON.parse(json), loaded: JSON.parse(loaded) });
-            this.lasthash = ChipType.hashText(json);
+    // public static Save() {
+    //     const text = JSON.stringify(ChipType);
+    //     window.localStorage.setItem(ChipType.SaveString, text);
+    //     this.lasthash = ChipType.hashText(text);
+    // }
+
+    public static LoadType(type: string): ChipTypeData {
+        type = type.toLowerCase();
+        const stored = window.localStorage.getItem(`${ChipType.SaveString}${type}`);
+        if (stored) {
+            const data = JSON.parse(stored);
+            if (data) return ChipType.LoadChip(type, data);
         }
+        return ChipType.Default();
+    }
+
+    public static SaveType(type: string, force: boolean = false): void {
+        if (ChipType.IsStandard(type)) return;
+        type = type.toLowerCase();
+        if (type != ChipType.BaseChip && !force) return;
+        const data = ChipType.GetData(type);
+        window.localStorage.setItem(`${ChipType.SaveString}${type}`, JSON.stringify(data));
+        console.log("Save Type", type);
     }
 
     public static Sanitize(data: ChipTypeData, type: string): ChipTypeData {

@@ -4,6 +4,10 @@ import StandardChips from "../common/StandardChips.json";
 import BaseChipTemplate from "./views/baseChip.twig";
 import { twig, Template } from "twig";
 
+interface ICompilerConstructor {
+    debug?: boolean;
+}
+
 class Compiler {
     private source!: ChipSource;
 
@@ -13,8 +17,13 @@ class Compiler {
 
     public static RES: any = null;
 
-    constructor() {
+    private debug: boolean = false;
+
+    constructor(params?: ICompilerConstructor) {
         this.template = twig({ data: BaseChipTemplate });
+        if (params) {
+            this.debug = params.debug == true;
+        }
     }
 
     public loadSource(source: ChipSource | string) {
@@ -49,7 +58,7 @@ class Compiler {
         const _chipCode: { [k: string]: string } = {};
         const _neededChips: string[] = [];
         Object.keys(this.source.chipData).forEach(type => {
-            const comp = new CompileChip(type, { ...this.source.chipData, ...this.standardChips });
+            const comp = new CompileChip(type, { ...this.source.chipData, ...this.standardChips }, this.debug);
             const result = comp.compile();
             _chipCode[type] = result.code;
             _neededChips.push(...result.customChipsNeeded);
@@ -71,7 +80,9 @@ class Compiler {
             chipCode: chipCode,
             chipConsts: chipConsts,
         });
+        console.groupCollapsed("SOURCE");
         console.log(code);
+        console.groupEnd();
         Compiler.RES = eval(code);
         console.groupEnd();
     }

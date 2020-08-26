@@ -80,7 +80,7 @@ class ChipDetails {
                     break;
             }
         }
-        this.designer.chipChange(this.chip);
+        this.designer.chipChange();
         window.setTimeout(() => this.render(), 10);
     }
 
@@ -136,7 +136,7 @@ class ChipDetails {
                     this.chip?.removeConst(event.target.dataset.index ?? "");
                     break;
                 case "editchip":
-                    if (this.chip) this.designer.editChip(this.chip);
+                    if (this.chip) this.designer.editChip(this.chip.type);
                     break;
                 default:
                     return;

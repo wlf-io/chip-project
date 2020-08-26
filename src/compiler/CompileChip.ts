@@ -12,7 +12,7 @@ export default class CompileChip {
     private outputVars: string[] = [];
     private constantVars: { [k: string]: any } = {};
 
-    private customChips: { [k: string]: string } = {};
+    private customChips: CustomChip[] = [];
 
     private type: string;
     private innerChips: ChipData[] = [];
@@ -23,7 +23,10 @@ export default class CompileChip {
 
     private template: Template;
 
-    constructor(type: string, all: ChipTypeDataSet) {
+    private debug: boolean;
+
+    constructor(type: string, all: ChipTypeDataSet, debug: boolean = false) {
+        this.debug = debug;
         if (!all.hasOwnProperty(type)) throw `CHIP DATA MISSING TYPE [${type}]`;
 
         const chips = all[type].content.chips;
@@ -71,17 +74,25 @@ export default class CompileChip {
         this.chipOrder = Object.entries(chipOrderScores).sort((a, b) => a[1] - b[1]).map(s => s[0]);
     }
 
-    private generateRunCode(): string[] {
-        const lines: string[] = [];
+    private generateRunCode(): ChipCode[] {
+        const chips: ChipCode[] = [];
 
-        this.getChipCons(this.type, false).forEach(con => {
-            lines.push(`I_${con.target.chip.replace(/[\W_]+/g, "_")}_${con.target.name} = I_${this.type}_${con.source.name};`);
+        chips.push({
+            type: this.type,
+            id: "",
+            description: "Setting Input Vars",
+            code: this.getChipCons(this.type, false).map(con => {
+                return `I_${con.target.chip.replace(/[\W_]+/g, "_")}_${con.target.name} = I_${this.type}_${con.source.name};`;
+            }),
+            isStandard: false,
         });
+
 
         this.chipOrder.forEach(chipID => {
             const chip = this.innerChips.find(chip => chip.id == chipID);
+            const lines: string[] = [];
             if (chip) {
-                lines.push(`// CHIP: ${chip.id} : ${chip.type}`);
+                //lines.push(`// CHIP: ${chip.id} : ${chip.type}`);
                 const id = chip.id.replace(/[\W_]+/g, "_");
                 const data = this.chipData[chip.type];
                 const outCons = this.getChipCons(chip.id, true);
@@ -101,10 +112,16 @@ export default class CompileChip {
                         lines.push(`I_${con.target.chip.replace(/[\W_]+/g, "_")}_${con.target.name} = O_${id}_${con.source.name};`);
                     }
                 });
-                lines.push("");
+                chips.push({
+                    id: chip.id,
+                    type: chip.type,
+                    description: "Chip Code",
+                    code: lines,
+                    isStandard: (data.code ?? "").length > 0
+                });
             }
         });
-        return lines;
+        return chips;
     }
 
     private getStandardChipData(chip: ChipData, data: ChipTypeData) {
@@ -129,15 +146,9 @@ export default class CompileChip {
     }
 
     private extractVars() {
-        for (const i of this.chipData[this.type].inputs.filter(i => (i ?? "").length)) {
-            this.chipInputs.push(`I_${this.type}_${i}`);
-        }
-        for (const o of this.chipData[this.type].outputs.filter(i => (i ?? "").length)) {
-            this.chipOutputs.push(`O_${this.type}_${o}`);
-        }
-        for (const c of this.chipData[this.type].constants.sort().filter(i => (i ?? "").length)) {
-            this.chipConstants.push(`C_${this.type}_${c}`);
-        }
+        this.chipInputs = this.chipData[this.type].inputs.filter(i => (i ?? "").length);
+        this.chipOutputs = this.chipData[this.type].outputs.filter(i => (i ?? "").length);
+        this.chipConstants = this.chipData[this.type].constants.sort().filter(i => (i ?? "").length);
 
 
         this.innerChips.forEach(chip => {
@@ -160,7 +171,13 @@ export default class CompileChip {
             const data = this.chipData[chip.type];
             const id = chip.id.replace(/[\W_]+/g, "_");
             if (data.code == null || data.code.length < 1) {
-                this.customChips[`CHIP_${id}`] = chip.type + "Chip";
+                this.customChips.push({
+                    id: chip.id,
+                    type: chip.type,
+                    varName: `CHIP_${id}`,
+                    chipName: `${chip.type}Chip`,
+                    constants: data.constants.map(c => `C_${id}_${c}`),
+                });
             }
         });
     }
@@ -178,18 +195,40 @@ export default class CompileChip {
 
     private render(): string {
         return this.template.render({
+            debug: this.debug,
+            chipType: this.type,
             chipName: this.type + "Chip",
-            inputs: this.inputVars,
-            outputs: this.outputVars,
-            constants: this.constantVars,
+            inputVars: this.inputVars,
+            outputVars: this.outputVars,
+            constantVars: this.constantVars,
             customChips: this.customChips,
-            chipInputs: this.chipInputs,
-            chipOutputs: this.chipOutputs,
-            chipConstants: this.chipConstants,
-            code: this.generateRunCode(),
+            chipInputs: this.chipInputs.map(i => `I_${this.type}_${i}`),
+            chipOutputs: this.chipOutputs.map(i => `O_${this.type}_${i}`),
+            chipConstants: this.chipConstants.map(i => `C_${this.type}_${i}`),
+            chipInputsRaw: this.chipInputs,
+            chipOutputsRaw: this.chipOutputs,
+            chipConstantsRaw: this.chipConstants,
+            chipCodes: this.generateRunCode(),
         });
     }
 }
+
+interface ChipCode {
+    type: string;
+    id: string;
+    code: string[];
+    description: string;
+    isStandard: boolean;
+}
+
+interface CustomChip {
+    id: string;
+    varName: string;
+    chipName: string;
+    type: string;
+    constants: string[];
+}
+
 export interface ChipCompileResult {
     code: string,
     customChipsNeeded: string[],

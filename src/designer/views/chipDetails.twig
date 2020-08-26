@@ -38,8 +38,9 @@
 					<div class="input-group-prepend">
 						<span class="input-group-text">{{key}}</span>
 					</div>
-					<input data-type="constant" data-index="{{key}}" class="form-control" type="text" value="{{ value|json_encode()|escape }}">
-					{% if not STANDARD %}
+					<input data-type="constant" data-index="{{key}}" class="form-control" type="text" 
+					{% if chip.isBaseChip %} disabled {% else %} value="{{ value|json_encode()|escape }}" {% endif %}>
+					{% if not STANDARD and chip.isBaseChip %}
 					<div class="input-group-append">
 						<button class="btn btn-danger" type="button" data-action="remove const" data-index="{{key}}">X</button>
 					 </div>
@@ -48,7 +49,7 @@
 			{% else %}
 				<input class="form-control" type="text" value="N/A" disabled>
 			{% endfor %}
-			{% if not STANDARD %}<button class="btn btn-primary" data-action="new const">Add Const</button>{% endif %}
+			{% if not STANDARD and chip.isBaseChip %}<button class="btn btn-primary" data-action="new const">Add Const</button>{% endif %}
 		</div>
 		{% if chip.isBaseChip %}
 		<hr>

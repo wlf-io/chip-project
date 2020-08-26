@@ -1,5 +1,5 @@
 import { rect, Rect, vec2, Vec2 } from "../../common/Transform";
-import { Pin, ChipType, ChipContent } from "./index";
+import { Pin, ChipType, ChipContent, Connection } from "./index";
 import { ChipTypeData } from "./ChipType";
 import { ChipData as BaseChipData } from "../../common/interfaces/source.interfaces";
 
@@ -27,6 +27,7 @@ export default class Chip {
         ChipType.New(type);
         this._id = id.toLowerCase();
         this._pos = { ...pos };
+        if (this.isBaseChip) this.content.setParentChip(this);
     }
 
     public get id(): string { return this._id; }
@@ -38,7 +39,7 @@ export default class Chip {
     public set type(type: string) { this._type = type.toLowerCase(); }
 
     public get isStandard(): boolean { return ChipType.IsStandard(this.type); }
-    public get content(): ChipContent { return this.getData().content; }
+    private get content(): ChipContent { return this.getData().content; }
     public get inputs(): string[] { return [...this.getData().inputs]; }
     public get outputs(): string[] { return [...this.getData().outputs]; }
     public get size(): vec2 { return { ...this.getData().size }; }
@@ -49,11 +50,45 @@ export default class Chip {
         this.getData().constants.forEach(key => consts[key] = this._constants[key] ?? "");
         return consts;
     };
+
+    public get chips(): Chip[] { return this.content.chips; }
+    public get connections(): Connection[] { return this.content.connections; }
+    public get innerSize(): vec2 { return this.content.size; }
+
     public get rotation(): number { return this._rotation; }
     public set rotation(rot: number) {
         while (rot < 0) rot += 4;
         while (rot > 3) rot -= 4;
         this._rotation = rot;
+    }
+
+    public removeChip(chip: Chip) {
+        this.content.removeChip(chip);
+        ChipType.SaveType(this.type);
+    }
+
+    public addChip(chip: Chip) {
+        this.content.addChip(chip);
+        ChipType.SaveType(this.type);
+    }
+
+    public connectionAtPos(pos: vec2): Connection | null {
+        return this.content.connectionAtPos(pos);
+    }
+
+    public updateConnections() {
+        this.content.updateConnections();
+        ChipType.SaveType(this.type);
+    }
+
+    public disconnect(pin: Pin) {
+        this.content.disconnect(pin);
+        ChipType.SaveType(this.type);
+    }
+
+    public connect(pinA: Pin, pinB: Pin, layer?: number) {
+        this.content.connect(pinA, pinB, layer);
+        ChipType.SaveType(this.type);
     }
 
     public rotate(rot: number = 1) {
@@ -180,6 +215,15 @@ export default class Chip {
 
     public clamp2Grid(gridSize: vec2) {
         this._pos = Vec2.ClampVec(this.pos, { x: 0, y: 0 }, { x: gridSize.x - this.size.x, y: gridSize.y - this.size.y });
+        ChipType.SaveType(this.type);
+    }
+
+    public getGridMatrix(calcCon: Connection | null) {
+        return this.content.getGridMatrix(calcCon);
+    }
+
+    public getChip(chipID: string): Chip | null {
+        return this.content.getChip(chipID);
     }
 
     public getPinAtPos(pos: vec2): Pin | null {

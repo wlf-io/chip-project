@@ -8,13 +8,23 @@ function ready(fn: Function) {
         document.addEventListener('DOMContentLoaded', () => fn());
     }
 }
-
+let designer: Designer | null = null;
 
 ready(() => {
+    window.addEventListener("message", (msg: MessageEvent) => {
+        if (designer) designer.message(msg);
+        else if (typeof msg.data == "object") {
+            switch ((msg.data["action"] ?? "").toLowerCase()) {
+                case "start":
+                    designer = Designer.Factory(msg.data["data"]);
+                    break;
+            }
+        }
+    });
+    console.log(window.opener, window.opener !== window);
     if (window.opener && window.opener !== window) {
-        document.body.textContent = "POPUP";
+        window.opener.postMessage({ action: "ready" }, "*");
     } else {
-        Designer.Factory({ chipType: "BaseChip" })
-            .run();
+        designer = Designer.Factory({ chipType: "BaseChip" });
     }
 });

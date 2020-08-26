@@ -68,7 +68,7 @@ export default class ChipContent {
     setSize(size: vec2) {
         this._size = { ...size };
         this.chips.forEach(chip => chip.clamp2Grid(this.size));
-        this.updateConnectionsForChip(null);
+        this.updateConnections();
     }
 
     public getChip(id: string): Chip | null {
@@ -83,7 +83,6 @@ export default class ChipContent {
         }
         if (this._chips.hasOwnProperty(chip.id)) return false;
         this._chips[chip.id] = chip;
-        ChipType.Save();
         return true;
     }
 
@@ -91,16 +90,14 @@ export default class ChipContent {
         if (this._chips.hasOwnProperty(chip.id)) {
             this.disconnectChip(chip);
             delete this._chips[chip.id];
-            ChipType.Save();
         }
     }
 
-    public updateConnectionsForChip(chip: Chip | null) {
-        let connections = this.connections.filter(con => (chip == null || con.usesChip(chip)) || !con.customPath);
+    public updateConnections() {
+        let connections = this.connections.filter(con => !con.customPath);
         connections.forEach(con => con.clearPath());
         connections.sort((a, b) => a.distance(this) - b.distance(this));
         connections.forEach(con => this.updatePathForConnection(con));
-        ChipType.Save();
     }
 
     private updatePathForConnection(con: Connection) {

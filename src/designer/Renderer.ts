@@ -1,5 +1,5 @@
 import { vec2, Vec2 } from "../common/Transform";
-import { Chip, ChipContent, ChipType, Connection, Pin } from "./chip";
+import { Chip, ChipType, Connection, Pin } from "./chip";
 import Designer from "./Designer";
 
 class Renderer {
@@ -108,7 +108,7 @@ class Renderer {
         };
     }
 
-    public draw(delta: number, chip: Chip, content: ChipContent): void {
+    public draw(delta: number, chip: Chip): void {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
 
@@ -126,13 +126,13 @@ class Renderer {
         const VY = -this.topLeft.y;
 
         this.drawGrid(chip, VX, VY, gridScale);
-        this.drawChips(content, VX, VY, gridScale);
-        this.drawConnections(content, VX, VY, gridScale);
+        this.drawChips(chip, VX, VY, gridScale);
+        this.drawConnections(chip, VX, VY, gridScale);
 
         if (this.designer.debug) {
             this.drawFPSGraph(delta, { x: 0, y: this.canvas.height - 120 }, { x: 520, y: 120 });
             this.context.fillText([Object.values(this.mouse.gridPos), Object.values(this.designer.snapPos2Grid(this.mouse.gridPos))].toString(), 0, 0);
-            const grid = content.getGridMatrix(null);
+            const grid = chip.getGridMatrix(null);
             this.context.textBaseline = "middle";
             this.context.textAlign = "center";
             for (let y = 0; y < grid.length; y++) {
@@ -149,16 +149,16 @@ class Renderer {
 
     }
 
-    private drawConnections(content: ChipContent, VX: number, VY: number, gridScale: number) {
-        content.connections.forEach(con => {
-            this.drawConnection(con, content, VX, VY, gridScale);
+    private drawConnections(chip: Chip, VX: number, VY: number, gridScale: number) {
+        chip.connections.forEach(con => {
+            this.drawConnection(con, chip, VX, VY, gridScale);
         });
         if (this.mouse.draggingPin && this.designer.connectingPin) {
             const pin = this.designer.connectingPin;
-            const chip = content.getChip(pin.chip);
-            if (chip) {
-                const pinPos = this.getPinRenderPos(pin, chip, gridScale);
-                if (chip.isBaseChip) pinPos.y += (pin.output ? 0.5 : -0.5) * gridScale;
+            const pinChip = chip.getChip(pin.chip);
+            if (pinChip) {
+                const pinPos = this.getPinRenderPos(pin, pinChip, gridScale);
+                if (pinChip.isBaseChip) pinPos.y += (pin.output ? 0.5 : -0.5) * gridScale;
                 this.context.strokeStyle = this.colours.highlight;
                 this.context.beginPath();
                 this.context.moveTo(VX + pinPos.x, VY + pinPos.y);
@@ -173,9 +173,9 @@ class Renderer {
         return Vec2.Multiply(pos, gridScale);
     }
 
-    private drawConnection(con: Connection, content: ChipContent, VX: number, VY: number, gridScale: number) {
-        const sChip = content.getChip(con.source.chip);
-        const tChip = content.getChip(con.target.chip);
+    private drawConnection(con: Connection, chip: Chip, VX: number, VY: number, gridScale: number) {
+        const sChip = chip.getChip(con.source.chip);
+        const tChip = chip.getChip(con.target.chip);
         if (sChip == null || tChip == null) return;
 
         if (this.mouse.draggingChip) {
@@ -207,8 +207,8 @@ class Renderer {
         this.context.setLineDash([]);
     }
 
-    private drawChips(content: ChipContent, VX: number, VY: number, gridScale: number) {
-        content.chips.forEach(chip => {
+    private drawChips(chip: Chip, VX: number, VY: number, gridScale: number) {
+        chip.chips.forEach(chip => {
             if (this.mouse.draggingChip && chip.id == this.designer.selectedChipID) return;
             const chipTl = chip.gridPos(gridScale);
             chipTl.x += VX;

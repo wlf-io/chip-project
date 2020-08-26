@@ -266,7 +266,7 @@
         "outputs": [
             "R"
         ],
-        "code": "{{output_R}} = {{constant_VAL|json_encode()}};",
+        "code": "{{output_R}} = {{constant_VAL}};",
         "type": "value",
         "description": "Outputs constant value"
     },
@@ -336,6 +336,38 @@
         "code": "{{output_R}} = Math.min({{input_A}},{{input_B}});",
         "type": "arithmatic",
         "description": "sums A and B"
+    },
+    "error": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "inputs": [
+            "A",
+            "B"
+        ],
+        "outputs": [
+            "R"
+        ],
+        "code": "JSON.parse('asdasdasdasd');",
+        "type": "test",
+        "description": "Throws an exception"
+    },
+    "throw": {
+        "size": {
+            "x": 1,
+            "y": 1
+        },
+        "constants": [
+            "ERROR"
+        ],
+        "inputs": [],
+        "outputs": [
+            "R"
+        ],
+        "code": "throw {{constant_ERROR}};",
+        "type": "test",
+        "description": "Throws Error"
     },
     "rand": {
         "size": {
