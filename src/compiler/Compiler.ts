@@ -15,8 +15,6 @@ class Compiler {
 
     private template: Template;
 
-    public static RES: any = null;
-
     private debug: boolean = false;
 
     constructor(params?: ICompilerConstructor) {
@@ -50,7 +48,7 @@ class Compiler {
                 },
                 code: raw.code ?? null,
             };
-            this.standardChips[name] = data;
+            this.standardChips[name.toLowerCase()] = data;
         }
     }
 
@@ -83,8 +81,8 @@ class Compiler {
         console.groupCollapsed("SOURCE");
         console.log(code);
         console.groupEnd();
-        Compiler.RES = eval(code);
         console.groupEnd();
+        return code;
     }
 }
 

@@ -31,6 +31,7 @@ export default class Chip {
     }
 
     public get id(): string { return this._id; }
+    public setID(id: string) { this._id = id };
 
     public get name(): string { return this._name.length < 1 ? (this.isStandard ? this.type.toUpperCase() : this.type) : this._name; }
     public set name(name: string) { this._name = name; }
@@ -68,7 +69,17 @@ export default class Chip {
     }
 
     public addChip(chip: Chip) {
-        this.content.addChip(chip);
+        let n: number = 0;
+        for (const chip of this.chips) {
+            const p = chip.id.split("_").pop() ?? "";
+            const c = parseInt(p);
+            if (c > n) n = c;
+        }
+        n++;
+        chip.setID(chip.type + "_" + n.toString());
+        if (!this.content.addChip(chip)) {
+            alert("Chip Add Failed");
+        }
         ChipType.SaveType(this.type);
     }
 

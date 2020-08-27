@@ -54,3 +54,44 @@ a.disabled {
     color: "#888";
     text-decoration: none;
 }
+
+pre {
+    position: fixed;
+    bottom: 1vh;
+    left: 6vh;
+    width: 0vh;
+    height: 0vh;
+    background-color: #CCC;
+    margin:0;
+}
+
+pre.open {
+    width: 70vh;
+    height: 98vh;
+}
+
+button.preToggle {
+    position: fixed;
+    bottom: 1vh;
+    left: 1vh;
+}
+
+pre{
+    counter-reset: line;
+}
+code{
+    counter-increment: line;
+    display: block;
+}
+
+code:before{
+    width: 40px;
+    padding-left: 5px;
+    margin-right: 5px;
+    background-color: #BBB;
+    display: inline-block;
+    content: counter(line);
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}

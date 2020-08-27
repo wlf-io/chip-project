@@ -73,6 +73,35 @@ class Designer {
         return new Designer(params);
     }
 
+    private code: typeof Function | null = null;
+
+    private codePre: HTMLPreElement;
+
+    public Run(...args: any[]) {
+        if (this.code) {
+            let exec = null;
+            try {
+                exec = new this.code();
+            } catch (e) {
+                exec = null;
+            }
+            if (exec) {
+                try {
+                    //@ts-ignore
+                    const res = exec.run(...args);
+                    console.log(res);
+                    //@ts-ignore
+                    console.log(exec.getState());
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        } else {
+            alert("No Valid Compile");
+        }
+    }
+
+
     constructor(params: IDesignerConstructor) {
         if (window.ChipDesigner) {
             throw "CHIP DESIGNER ALREADY RUN";
@@ -95,10 +124,19 @@ class Designer {
         this.setupContextMenu();
         if (params.render ?? true) this.setupRenderer();
         window.addEventListener("beforeunload", () => this.close());
+        this.codePre = document.createElement("pre");
+        this.codePre.classList.add("open");
+        document.body.append(this.codePre);
+
+        const preButton = document.createElement("button");
+        preButton.classList.add("preToggle", "btn", "btn-primary");
+        preButton.textContent = "Code";
+        preButton.addEventListener("mouseup", () => this.codePre.classList.toggle("open"));
+        document.body.append(preButton);
 
         this.chipChange();
 
-        this.run();
+        this.start();
     }
 
     private close() {
@@ -194,7 +232,7 @@ class Designer {
         window.localStorage.setItem(Designer.SaveString, JSON.stringify({
             zoom: this._zoom,
             topLeft: { ...this._topLeft },
-            debug: this._debug,
+            debug: this.debug,
         }));
         window.localStorage.setItem(Designer.ChipSaveString, JSON.stringify(this.baseChip));
     }
@@ -206,7 +244,7 @@ class Designer {
             if (data) {
                 this._zoom = parseInt(data.zoom || this._zoom);
                 this._topLeft = { ...(data.topLeft ?? this._topLeft) };
-                this._debug = data.debug ?? this._debug;
+                this._debug = data.debug ?? this.debug;
                 this._zoom = this.clamp(this._zoom, 0.1, 4.0);
             }
         }
@@ -272,6 +310,7 @@ class Designer {
     private keyUp(event: KeyboardEvent) {
         if (event.altKey && event.shiftKey && event.ctrlKey && event.key === "D") {
             this._debug = !this._debug;
+            this.compile();
         }
         if (event.key == "r" && this.draggingChip && this.selectedChip) {
             this.selectedChip.rotate();
@@ -374,10 +413,25 @@ class Designer {
         this.baseChip.updateConnections();
         this.baseChipDetails.render();
         this.selectedChipDetails.render();
+        this.compile();
+    }
+
+    public compile() {
         if (this.baseChip.errors.length < 1) {
-            const comp = new window.ChipCompiler({ debug: true });
+            const comp = new window.ChipCompiler({ debug: this.debug });
             comp.loadSource(JSON.stringify(this.compileData()));
-            comp.run();
+            const code = comp.run();
+            while (this.codePre.firstChild) this.codePre.removeChild(this.codePre.firstChild);
+            code.split("\n").forEach(line => {
+                const code = document.createElement("code");
+                code.textContent = line;
+                this.codePre.append(code);
+            });
+            try {
+                this.code = eval(code);
+            } catch (e) {
+                console.error("COMILE CODE INVALID");
+            }
         }
     }
 
@@ -525,8 +579,8 @@ class Designer {
     }
 
     private insertChipAtPos(chip: Chip, pos: vec2) {
-        chip.setPos(this.snapPos2Grid(pos), this.gridSize);
         this.baseChip.addChip(chip);
+        chip.setPos(this.snapPos2Grid(pos), this.gridSize);
         this.chipChange();
     }
 
@@ -537,12 +591,11 @@ class Designer {
 
     public get chipEdge(): number { return 0.28; }
 
-    public run(): Designer {
+    public start(): Designer {
         this.selectedChipDetails.hide();
         if (this.running) return this;
         this.running = true;
         this.update(0);
-        console.log("BOB");
         return this;
     }
 

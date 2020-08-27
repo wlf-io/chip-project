@@ -34,6 +34,7 @@ module.exports = [
                 },
                 {
                     test: /\.twig$/,
+                    // loader: "twig-loader",
                     loader: "raw-loader",
                     options: {
                         // See options section below
@@ -43,11 +44,11 @@ module.exports = [
         },
         plugins: [
             ...(local.plugins || []),
-            // new CopyPlugin({
-            //     patterns: [
-            //         { context: 'src/designer/public', from: './**/*', to: "." },
-            //     ]
-            // }),
+            new CopyPlugin({
+                patterns: [
+                    { context: 'src/designer/public', from: './**/*', to: "." },
+                ]
+            }),
             // new MiniCssExtractPlugin(),
             // new HtmlWebpackPlugin({
             //     excludeChunks: ["sw"],

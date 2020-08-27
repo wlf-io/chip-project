@@ -1,5 +1,5 @@
 {
-    "+": {
+    "SUM": {
         "size": {
             "x": 1,
             "y": 1
@@ -15,7 +15,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    "-": {
+    "SUB": {
         "size": {
             "x": 1,
             "y": 1
@@ -31,7 +31,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    "*": {
+    "MULT": {
         "size": {
             "x": 1,
             "y": 1
@@ -47,7 +47,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    "^": {
+    "POW": {
         "size": {
             "x": 1,
             "y": 1
@@ -127,7 +127,7 @@
         "type": "logic",
         "description": "sums A and B"
     },
-    "!": {
+    "NOT": {
         "size": {
             "x": 1,
             "y": 1
@@ -142,7 +142,7 @@
         "type": "logic",
         "description": "sums A and B"
     },
-    "/": {
+    "DIV": {
         "size": {
             "x": 1,
             "y": 1
@@ -158,7 +158,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    ">": {
+    "GT": {
         "size": {
             "x": 1,
             "y": 1
@@ -174,7 +174,7 @@
         "type": "logic",
         "description": "sums A and B"
     },
-    "<": {
+    "LT": {
         "size": {
             "x": 1,
             "y": 1
@@ -190,7 +190,7 @@
         "type": "logic",
         "description": "sums A and B"
     },
-    "<=": {
+    "LTE": {
         "size": {
             "x": 1,
             "y": 1
@@ -206,7 +206,7 @@
         "type": "logic",
         "description": "sums A and B"
     },
-    ">=": {
+    "GTE": {
         "size": {
             "x": 1,
             "y": 1
@@ -222,7 +222,7 @@
         "type": "logic",
         "description": "checks a > B"
     },
-    "==": {
+    "EQ": {
         "size": {
             "x": 1,
             "y": 1
@@ -238,7 +238,7 @@
         "type": "logic",
         "description": "checks A is equal to B"
     },
-    "!=": {
+    "NEQ": {
         "size": {
             "x": 1,
             "y": 1
@@ -254,7 +254,7 @@
         "type": "logic",
         "description": "checks A is not equal to B"
     },
-    "const": {
+    "CONST": {
         "size": {
             "x": 1,
             "y": 1
@@ -270,7 +270,7 @@
         "type": "value",
         "description": "Outputs constant value"
     },
-    "chip_const": {
+    "CHIP_CONST": {
         "size": {
             "x": 1,
             "y": 1
@@ -286,7 +286,7 @@
         "type": "value",
         "description": "Outputs constant value"
     },
-    "var": {
+    "VAR": {
         "size": {
             "x": 1,
             "y": 1
@@ -305,7 +305,7 @@
         "type": "value",
         "description": "sums A and B"
     },
-    "split": {
+    "SPLIT": {
         "size": {
             "x": 1,
             "y": 1
@@ -321,7 +321,7 @@
         "type": "value",
         "description": "sums A and B"
     },
-    "min": {
+    "MIN": {
         "size": {
             "x": 1,
             "y": 1
@@ -337,7 +337,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    "error": {
+    "ERROR": {
         "size": {
             "x": 1,
             "y": 1
@@ -353,7 +353,7 @@
         "type": "test",
         "description": "Throws an exception"
     },
-    "throw": {
+    "THROW": {
         "size": {
             "x": 1,
             "y": 1
@@ -369,7 +369,7 @@
         "type": "test",
         "description": "Throws Error"
     },
-    "rand": {
+    "RAND": {
         "size": {
             "x": 1,
             "y": 1
@@ -382,7 +382,7 @@
         "type": "arithmatic",
         "description": "sums A and B"
     },
-    "max": {
+    "MAX": {
         "size": {
             "x": 1,
             "y": 1
