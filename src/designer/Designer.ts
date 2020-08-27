@@ -64,6 +64,8 @@ class Designer {
 
     private isPopup: boolean;
 
+    private codeOpen: boolean = false;
+
     public static get SaveString(): string { return "CHIP_DESIGNER"; }
     public static get ChipSaveString(): string { return "CHIP_DESIGNER_CHIP"; }
 
@@ -125,13 +127,15 @@ class Designer {
         if (params.render ?? true) this.setupRenderer();
         window.addEventListener("beforeunload", () => this.close());
         this.codePre = document.createElement("pre");
-        this.codePre.classList.add("open");
+        if (this.codeOpen) this.codePre.classList.add("open");
         document.body.append(this.codePre);
 
         const preButton = document.createElement("button");
         preButton.classList.add("preToggle", "btn", "btn-primary");
         preButton.textContent = "Code";
-        preButton.addEventListener("mouseup", () => this.codePre.classList.toggle("open"));
+        preButton.addEventListener("mouseup", () => {
+            this.codeOpen = this.codePre.classList.toggle("open");
+        });
         document.body.append(preButton);
 
         this.chipChange();
@@ -233,6 +237,7 @@ class Designer {
             zoom: this._zoom,
             topLeft: { ...this._topLeft },
             debug: this.debug,
+            codeOpen: this.codeOpen,
         }));
         window.localStorage.setItem(Designer.ChipSaveString, JSON.stringify(this.baseChip));
     }
@@ -246,6 +251,7 @@ class Designer {
                 this._topLeft = { ...(data.topLeft ?? this._topLeft) };
                 this._debug = data.debug ?? this.debug;
                 this._zoom = this.clamp(this._zoom, 0.1, 4.0);
+                this.codeOpen = (data.codeOpen ?? false) == true;
             }
         }
         if (this.isPopup) return;
